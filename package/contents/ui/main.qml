@@ -242,6 +242,7 @@ PlasmoidItem {
                 Layout.bottomMargin: Kirigami.Units.largeSpacing
                 clip: true
                 contentWidth: availableWidth
+                QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AlwaysOff
 
                 ColumnLayout {
                     width: parent.width
@@ -265,8 +266,7 @@ PlasmoidItem {
                         color: Kirigami.Theme.backgroundColor
                         border.color: Kirigami.Theme.disabledTextColor
                         border.width: 1
-                        opacity: 0.2
-                        height: youdaoCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+                        implicitHeight: youdaoCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
                         ColumnLayout {
                             id: youdaoCol
@@ -285,7 +285,7 @@ PlasmoidItem {
                                 Repeater {
                                     model: youdaoResult ? youdaoResult.audio : []
 
-                                    delegate: Button {
+                                    delegate: QQC2.Button {
                                         id: audioBtn
                                         required property var modelData
                                         text: modelData.text
@@ -299,7 +299,12 @@ PlasmoidItem {
                                     }
                                 }
 
-                                MediaPlayer { id: audioPlayer }
+                                MediaPlayer {
+                                    id: audioPlayer
+                                    audioOutput: AudioOutput {}
+                                    onErrorOccurred: console.log("audioPlayer error:", error, errorString)
+                                    onPlaybackStateChanged: console.log("audioPlayer state:", playbackState)
+                                }
                             }
 
                             // ── Exam type tags ─────────────
@@ -314,10 +319,9 @@ PlasmoidItem {
                                     delegate: Rectangle {
                                         required property string modelData
                                         color: Kirigami.Theme.highlightColor
-                                        opacity: 0.6
                                         radius: Kirigami.Units.smallSpacing
                                         implicitHeight: examLabel.implicitHeight + Kirigami.Units.smallSpacing
-                                        implicitWidth: examLabel.implicitWidth + Kirigami.Units.smallSpacing
+                                        implicitWidth: examLabel.implicitWidth + Kirigami.Units.smallSpacing + 10
 
                                         PlasmaComponents3.Label {
                                             id: examLabel
@@ -340,20 +344,18 @@ PlasmoidItem {
 
                                     delegate: Rectangle {
                                         required property var modelData
-                                        color: Kirigami.Theme.backgroundColor
+                                        color: "transparent"
                                         border.color: Kirigami.Theme.disabledTextColor
                                         border.width: 1
-                                        opacity: 0.5
                                         radius: Kirigami.Units.smallSpacing
                                         implicitHeight: formLabel.implicitHeight + Kirigami.Units.smallSpacing
-                                        implicitWidth: formLabel.implicitWidth + Kirigami.Units.smallSpacing
+                                        implicitWidth: formLabel.implicitWidth + Kirigami.Units.smallSpacing + 10
 
                                         PlasmaComponents3.Label {
                                             id: formLabel
                                             anchors.centerIn: parent
                                             text: modelData.form + " " + modelData.type
                                             font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
-                                            color: Kirigami.Theme.disabledTextColor
                                         }
                                     }
                                 }
@@ -385,9 +387,8 @@ PlasmoidItem {
                                             required property string modelData
                                             Layout.fillWidth: true
                                             Layout.leftMargin: Kirigami.Units.smallSpacing
-                                            color: Kirigami.Theme.alternateBackgroundColor
+                                            color: Kirigami.Theme.backgroundColor
                                             radius: Kirigami.Units.smallSpacing
-                                            opacity: 0.4
                                             implicitHeight: trLabel.implicitHeight + Kirigami.Units.smallSpacing
 
                                             PlasmaComponents3.Label {
@@ -417,8 +418,7 @@ PlasmoidItem {
                         color: Kirigami.Theme.backgroundColor
                         border.color: Kirigami.Theme.disabledTextColor
                         border.width: 1
-                        opacity: 0.2
-                        height: dsCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+                        implicitHeight: dsCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
                         ColumnLayout {
                             id: dsCol
