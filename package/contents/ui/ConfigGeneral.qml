@@ -41,28 +41,25 @@ KCMUtils.SimpleKCM {
             Layout.topMargin: Kirigami.Units.smallSpacing
         }
 
-        RowLayout {
+        GridLayout {
+            columns: 2
             Layout.fillWidth: true
+            rowSpacing: Kirigami.Units.smallSpacing
+            columnSpacing: Kirigami.Units.largeSpacing
 
             PlasmaComponents3.Label {
                 text: i18n("API Key:")
             }
-
             QQC2.TextField {
                 id: apiKeyField
                 Layout.fillWidth: true
                 placeholderText: i18n("sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
                 echoMode: TextInput.Password
             }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
 
             PlasmaComponents3.Label {
                 text: i18n("Model:")
             }
-
             QQC2.ComboBox {
                 id: modelCombo
                 Layout.fillWidth: true
@@ -85,15 +82,10 @@ KCMUtils.SimpleKCM {
                     _ready = true
                 }
             }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
 
             PlasmaComponents3.Label {
                 text: i18n("System Prompt:")
             }
-
             QQC2.TextArea {
                 id: promptField
                 Layout.fillWidth: true
@@ -101,24 +93,10 @@ KCMUtils.SimpleKCM {
                 placeholderText: i18n("Enter system prompt for the AI translator…")
                 wrapMode: Text.WordWrap
             }
-        }
-
-        Kirigami.Separator { Layout.fillWidth: true }
-
-        Kirigami.Heading {
-            level: 4
-            text: i18n("Advanced")
-            Layout.fillWidth: true
-            font.pointSize: Kirigami.Theme.defaultFont.pointSize
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
 
             PlasmaComponents3.Label {
                 text: i18n("Temperature:")
             }
-
             QQC2.SpinBox {
                 id: tempSpin
                 from: 0
@@ -153,16 +131,9 @@ KCMUtils.SimpleKCM {
                 onValueModified: page.cfg_deepseekTemperature = realValue
             }
 
-            Item { Layout.fillWidth: true }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-
             PlasmaComponents3.Label {
                 text: i18n("Top-P:")
             }
-
             QQC2.SpinBox {
                 id: topPSpin
                 from: 0
@@ -197,16 +168,9 @@ KCMUtils.SimpleKCM {
                 onValueModified: page.cfg_deepseekTopP = realValue
             }
 
-            Item { Layout.fillWidth: true }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-
             PlasmaComponents3.Label {
                 text: i18n("Max Tokens:")
             }
-
             QQC2.SpinBox {
                 id: maxTokensSpin
                 from: 1
@@ -216,16 +180,6 @@ KCMUtils.SimpleKCM {
                 Layout.maximumWidth: Kirigami.Units.gridUnit * 10
                 editable: true
             }
-
-            Item { Layout.fillWidth: true }
-        }
-
-        // ── Other settings ───────────────────────────────────
-        Kirigami.Heading {
-            level: 3
-            text: i18n("Other")
-            Layout.fillWidth: true
-            Layout.topMargin: Kirigami.Units.smallSpacing
         }
 
         // ── Security note ────────────────────────────────────

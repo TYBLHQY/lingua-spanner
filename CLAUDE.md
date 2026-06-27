@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Lingua Spanner** — a KDE Plasma 6 plasmoid (applet) for translation. Supports dual-engine: Youdao web scraping dictionary and DeepSeek AI API translation. Provides a single global shortcut: open panel → read selection if available → paste and translate, otherwise just focus input.
+**Lingua Spanner** — a KDE Plasma 6 plasmoid (applet) for translation. Supports dual-engine: Youdao web dictionary and DeepSeek AI API translation. Provides a single global shortcut: open panel → read selection if available → paste and translate, otherwise just focus input.
 
 - **Type:** Plasma/Applet (KPackageStructure)
 - **Target:** Plasma 6.0+
@@ -33,16 +33,20 @@ lingua-spanner/
 │   │       ├── ConfigGeneral.qml   # Settings form: engine selection, API key
 │   │       ├── PasteSelectionHelper.qml  # Text picker wrapping ProcessHelper
 │   │       └── services/
-│   │           ├── YoudaoWebNewService.qml  # Youdao dictionary scraping
-│   │           └── DeepSeekService.qml      # DeepSeek API translation
+│   │           ├── DeepSeekService.qml          # DeepSeek API translation
+│   │           ├── FreeDictionaryApiService.qml # Free Dictionary API (no key needed)
+│   │           └── YoudaoWebNewService.qml      # Youdao web dictionary
 │   └── translate/               # Translation files
 ├── src/
 │   └── ProcessHelper.h/.cpp     # C++ QML plugin — QProcess xclip wrapper
 ├── tests/
 │   ├── diagnostic.qml           # Interactive diagnostic UI
 │   └── tst_ProcessHelper.qml    # ProcessHelper unit test
-├── youdao-web-new-scraping-rules.md  # Youdao scraping reference
-└── .gitignore
+├── docs/
+│   ├── feasibility-report.md           # Original feasibility report (archived)
+│   ├── requirements.md                 # Project requirements document
+│   └── youdao-web-html-parsing-rules.md # Youdao HTML parsing reference
+└── .gitignore                  # .claude/ ignored, CLAUDE.md tracked
 ```
 
 ## Architecture
@@ -54,8 +58,9 @@ The translation app is a pure-QML plasmoid with a small C++ helper module for xc
 | File | Role |
 |------|------|
 | `package/contents/ui/main.qml` | Plasmoid entry: UI, shortcuts, orchestration |
-| `services/YoudaoWebNewService.qml` | Scrapes `dict.youdao.com` → parses HTML → returns exp/audio/forms |
-| `services/DeepSeekService.qml` | Calls `api.deepseek.com/chat/completions` → returns translation |
+| `services/DeepSeekService.qml` | Calls `api.deepseek.com/chat/completions` → returns AI translation |
+| `services/YoudaoWebNewService.qml` | Queries `dict.youdao.com` → parses HTML → returns exp/audio/forms |
+| `services/FreeDictionaryApiService.qml` | Queries `api.dictionaryapi.dev` → returns English definitions (no key) |
 | `PasteSelectionHelper.qml` | Reads primary selection / clipboard via ProcessHelper C++ |
 
 ### Activation behavior
@@ -100,9 +105,9 @@ The `LinguaSpannerHelper` QML module (in `package/contents/lib/LinguaSpannerHelp
 - **Self-contained**: The module is bundled in the plasmoid package (`contents/lib/LinguaSpannerHelper/`). No system-wide install needed.
 - **QML import**: `import "../lib/LinguaSpannerHelper"` from `main.qml`
 
-### Youdao Web Scraping
+### Youdao Web Dictionary
 
-Reference: `youdao-web-new-scraping-rules.md`
+Reference: `docs/youdao-web-html-parsing-rules.md` (HTML parsing details)
 
 URL: `GET https://dict.youdao.com/result?word=<word>&lang=en`
 Root container: `.modules`
