@@ -22,7 +22,6 @@ PlasmoidItem {
     readonly property string translateMode: Plasmoid.configuration.translateMode || "youdao"
     readonly property string deepseekApiKey: Plasmoid.configuration.deepseekApiKey || ""
     readonly property string deepseekModel: Plasmoid.configuration.deepseekModel || "deepseek-chat"
-    readonly property bool autoDetectLang: Plasmoid.configuration.autoDetectLang !== false
 
     // ── Translation state ───────────────────────────────────
     property string inputText: ""
@@ -57,15 +56,11 @@ PlasmoidItem {
             // deepseek
             if (!deepseekApiKey) {
                 deepseekResult = { error: i18n("DeepSeek API key not configured") }
-                checkDone()
+                translating = false
             } else {
                 deepseekService.translate(inputText, deepseekApiKey, deepseekModel)
             }
         }
-    }
-
-    function checkDone() {
-        translating = false
     }
 
     // ── Pick text from focused window when panel opens ────
@@ -122,11 +117,11 @@ PlasmoidItem {
         id: youdaoService
         onFinished: function(result) {
             youdaoResult = result
-            checkDone()
+            translating = false
         }
         onError: function(msg) {
             youdaoResult = { error: msg }
-            checkDone()
+            translating = false
         }
     }
 
@@ -134,11 +129,11 @@ PlasmoidItem {
         id: deepseekService
         onFinished: function(result) {
             deepseekResult = result
-            checkDone()
+            translating = false
         }
         onError: function(msg) {
             deepseekResult = { error: msg }
-            checkDone()
+            translating = false
         }
     }
 

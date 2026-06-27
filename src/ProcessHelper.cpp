@@ -2,7 +2,6 @@
 
 #include <cstdio>
 #include <QElapsedTimer>
-#include <QFileInfo>
 #include <QDateTime>
 
 ProcessHelper::ProcessHelper(QObject *parent)
@@ -12,7 +11,6 @@ ProcessHelper::ProcessHelper(QObject *parent)
 
 static void debugLog(const char *msg)
 {
-    // Write directly to stderr so it always reaches journalctl
     QByteArray ts = QDateTime::currentDateTime().toString("hh:mm:ss.zzz").toLatin1();
     fprintf(stderr, "[ProcessHelper] %s %s\n", ts.constData(), msg);
     fflush(stderr);
@@ -25,7 +23,6 @@ QString ProcessHelper::readProcessOutput(const QString &program,
     QElapsedTimer timer;
     timer.start();
 
-    // Build command line for logging
     QString cmdLine = program;
     for (const auto &a : args)
         cmdLine += " '" + a + "'";
@@ -61,9 +58,4 @@ QString ProcessHelper::readProcessOutput(const QString &program,
              .arg(preview)
              .toLatin1());
     return result;
-}
-
-void ProcessHelper::log(const QString &msg)
-{
-    debugLog(msg.toLatin1());
 }

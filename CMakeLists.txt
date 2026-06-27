@@ -33,7 +33,6 @@ install(TARGETS lingua_spanner_helper
     LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/qml/LinguaSpannerHelper
 )
 
-# Install the generated qmldir + friends
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/LinguaSpannerHelper/qmldir"
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/qml/LinguaSpannerHelper
@@ -43,46 +42,3 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/qml/LinguaSpannerHelper
     OPTIONAL
 )
-
-# ── Optional: KF6 Applet (skipped if headers missing) ──────
-find_package(ECM QUIET)
-if(ECM_FOUND)
-    set(CMAKE_MODULE_PATH ${ECM_MODULE_PATH})
-    include(KDEInstallDirs)
-    include(KDECMakeSettings)
-    include(KDECompilerSettings NO_POLICY_SCOPE)
-
-    find_package(Qt6 6.7 QUIET COMPONENTS DBus Quick)
-    find_package(KF6 6.0 QUIET COMPONENTS Plasma I18n Config)
-
-    if(KF6_FOUND)
-        set(lingua_spanner_applet_SRCS
-            src/mainapplet.cpp
-            src/atspitextreader.cpp
-            src/htmlparser.cpp
-            src/ocrrunner.cpp
-        )
-
-        plasma_add_applet(org.kde.lingua-spanner
-            CPP_SOURCES  ${lingua_spanner_applet_SRCS}
-            QML_SOURCES  ui/main.qml
-        )
-
-        target_link_libraries(org.kde.lingua-spanner PRIVATE
-            Qt6::Core Qt6::DBus Qt6::Qml Qt6::Quick
-            KF6::Plasma KF6::I18n KF6::Config
-        )
-
-        find_package(lexbor QUIET COMPONENTS html css dom)
-        if(lexbor_FOUND)
-            target_link_libraries(org.kde.lingua-spanner PRIVATE
-                liblexbor-html liblexbor-css liblexbor-dom liblexbor-core
-            )
-        endif()
-
-        install(TARGETS org.kde.lingua-spanner
-            DESTINATION ${KDE_INSTALL_PLUGINDIR}/plasma/applets
-        )
-        plasma_install_package(package org.kde.lingua-spanner)
-    endif()
-endif()
