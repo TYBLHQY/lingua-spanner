@@ -31,6 +31,28 @@ PlasmoidItem {
     property bool translating: false
     property string errorMessage: ""
 
+    // ── DeepSeek history (in-memory) ────────────────────────
+    property var dsHistory: []
+
+    function addHistory(input, translation) {
+        var entry = findInHistory(input)
+        if (entry) {
+            entry.translation = translation
+            promoteHistory(entry)
+        } else {
+            entry = { input: input, translation: translation }
+            dsHistory.unshift(entry)
+            promoteHistory(entry)
+        }
+    }
+
+    function deleteHistory(index) {
+        dsHistory.splice(index, 1)
+        var tmp = dsHistory
+        dsHistory = []
+        dsHistory = tmp
+    }
+
     // ── Reference to inputField inside fullRepresentation ───
     property QtObject p_inputField: null
 
@@ -59,14 +81,49 @@ PlasmoidItem {
         if (mode === "youdao") {
             youdaoService.fetch(inputText)
         } else {
-            // deepseek
-            if (!deepseekApiKey) {
-                deepseekResult = { error: i18n("DeepSeek API key not configured") }
+            // deepseek — check history cache first
+            var cached = findInHistory(inputText)
+            if (cached) {
+                // Found in history: display from cache, no API call
+                promoteHistory(cached)
+                translating = false
+            } else if (!deepseekApiKey) {
+                errorMessage = i18n("DeepSeek API key not configured")
                 translating = false
             } else {
                 deepseekService.translate(inputText, deepseekApiKey, deepseekModel)
             }
         }
+    }
+
+    // ── History helpers ──────────────────────────────────
+    function findInHistory(text) {
+        for (var i = 0; i < dsHistory.length; i++) {
+            if (dsHistory[i].input === text) return dsHistory[i]
+        }
+        return null
+    }
+
+    function promoteHistory(entry) {
+        // Remove from current position
+        for (var i = 0; i < dsHistory.length; i++) {
+            if (dsHistory[i] === entry) {
+                dsHistory.splice(i, 1)
+                break
+            }
+        }
+        // Add to front as NEW
+        entry.isNew = true
+        dsHistory.unshift(entry)
+        // Others become HISTORY
+        for (i = 1; i < dsHistory.length; i++) {
+            dsHistory[i].isNew = false
+        }
+        if (dsHistory.length > 20) dsHistory.length = 20
+        // Force QML re-evaluation
+        var tmp = dsHistory
+        dsHistory = []
+        dsHistory = tmp
     }
 
     // ── Pick text from focused window when panel opens ────
@@ -133,12 +190,14 @@ PlasmoidItem {
     Services.DeepSeekService {
         id: deepseekService
         onFinished: function(result) {
-            deepseekResult = result
             translating = false
+            if (result.translation) {
+                root.addHistory(inputText, result.translation)
+            }
         }
         onError: function(msg) {
-            deepseekResult = { error: msg }
             translating = false
+            root.errorMessage = msg
         }
     }
 
@@ -217,7 +276,10 @@ PlasmoidItem {
                         id: inputField
                         Layout.fillWidth: true
                         placeholderText: i18n("Enter text to translate…")
-                        onAccepted: root.translate(text)
+                        onAccepted: {
+                            root.translate(text)
+                            selectAll()
+                        }
                         Component.onCompleted: root.p_inputField = inputField
                     }
 
@@ -410,50 +472,69 @@ PlasmoidItem {
                         }
                     }
 
-                    // ── DeepSeek result ───────────────────
-                    Rectangle {
-                        visible: deepseekResult !== null
-                        Layout.fillWidth: true
-                        radius: Kirigami.Units.smallSpacing
-                        color: Kirigami.Theme.backgroundColor
-                        border.color: Kirigami.Theme.disabledTextColor
-                        border.width: 1
-                        implicitHeight: dsCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+                    // ── DeepSeek history ──────────────────
+                    Repeater {
+                        id: histRepeater
+                        model: root.dsHistory
 
-                        ColumnLayout {
-                            id: dsCol
-                            anchors {
-                                fill: parent
-                                margins: Kirigami.Units.smallSpacing
-                            }
-                            spacing: Kirigami.Units.smallSpacing
+                        delegate: Rectangle {
+                            required property int index
+                            required property var modelData
 
-                            PlasmaComponents3.Label {
-                                text: i18n("DeepSeek AI Translation")
-                                font.bold: true
-                                color: Kirigami.Theme.disabledTextColor
-                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
-                            }
+                            Layout.fillWidth: true
+                            radius: Kirigami.Units.smallSpacing
+                            color: Kirigami.Theme.backgroundColor
+                            border.color: Kirigami.Theme.disabledTextColor
+                            border.width: 1
+                            implicitHeight: histCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
-                            PlasmaComponents3.Label {
-                                text: deepseekResult ? (deepseekResult.translation || deepseekResult.error || JSON.stringify(deepseekResult)) : ""
-                                wrapMode: Text.WordWrap
-                                Layout.fillWidth: true
-                                font.pointSize: Kirigami.Theme.defaultFont.pointSize
+                            ColumnLayout {
+                                id: histCol
+                                anchors {
+                                    fill: parent
+                                    margins: Kirigami.Units.smallSpacing
+                                }
+                                spacing: Kirigami.Units.smallSpacing
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: Kirigami.Units.smallSpacing
+
+                                    PlasmaComponents3.Label {
+                                        text: modelData.isNew ? i18n("NEW") : i18n("HISTORY")
+                                        font.bold: true
+                                        font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
+                                        color: modelData.isNew ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.disabledTextColor
+                                    }
+
+                                    Item { Layout.fillWidth: true }
+
+                                    QQC2.Button {
+                                        icon.name: "edit-delete"
+                                        flat: true
+                                        implicitWidth: Kirigami.Units.iconSizes.small
+                                        implicitHeight: Kirigami.Units.iconSizes.small
+                                        onClicked: root.deleteHistory(index)
+                                        Accessible.name: i18n("Delete history entry")
+                                    }
+                                }
+
+                                PlasmaComponents3.Label {
+                                    text: modelData.input
+                                    font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                    color: Kirigami.Theme.neutralTextColor
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
+
+                                PlasmaComponents3.Label {
+                                    text: modelData.translation
+                                    font.pointSize: Kirigami.Theme.defaultFont.pointSize
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
                             }
                         }
-                    }
-
-                    // ── Placeholder ───────────────────────
-                    PlasmaComponents3.Label {
-                        visible: !root.translating
-                            && youdaoResult === null
-                            && deepseekResult === null
-                            && root.errorMessage === ""
-                        text: i18n("Type text above and press Enter or click Translate.")
-                        color: Kirigami.Theme.disabledTextColor
-                        Layout.fillWidth: true
-                        Layout.topMargin: Kirigami.Units.gridUnit
                     }
 
                     Item { Layout.fillHeight: true }

@@ -23,5 +23,8 @@
     <entry name="shortcutPick" type="String">
       <default>Meta+2</default>
     </entry>
+    <entry name="history" type="String">
+      <default>[]</default>
+    </entry>
   </group>
 </kcfg>
