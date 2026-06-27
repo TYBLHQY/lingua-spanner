@@ -614,6 +614,7 @@ PlasmoidItem {
                                     ? Kirigami.Theme.negativeTextColor
                                     : Kirigami.Theme.disabledTextColor
                                 font.italic: true
+                                wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                             }
 
