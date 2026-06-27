@@ -1,0 +1,7 @@
+module LinguaSpannerHelper
+linktarget lingua_spanner_helperplugin
+optional plugin lingua_spanner_helperplugin
+classname LinguaSpannerHelperPlugin
+typeinfo lingua_spanner_helper.qmltypes
+prefer :/qt/qml/LinguaSpannerHelper/
+

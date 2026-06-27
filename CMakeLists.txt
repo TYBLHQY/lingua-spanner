@@ -20,6 +20,11 @@ qt_add_qml_module(lingua_spanner_helper
     OUTPUT_DIRECTORY "${CMAKE_INSTALL_PREFIX}/lib/qml/LinguaSpannerHelper"
 )
 
+set_target_properties(lingua_spanner_helperplugin PROPERTIES
+    INSTALL_RPATH "$ORIGIN"
+    BUILD_RPATH "$ORIGIN"
+)
+
 target_include_directories(lingua_spanner_helper PRIVATE
     ${CMAKE_SOURCE_DIR}/src
 )

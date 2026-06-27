@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/">
+    <file alias="/qt/qml/LinguaSpannerHelper">/home/myq/.local/lib/qml/LinguaSpannerHelper</file>
+
+  </qresource>
+</RCC>

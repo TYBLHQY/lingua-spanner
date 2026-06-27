@@ -57,34 +57,54 @@ The translation app is a pure-QML plasmoid (no C++ compilation needed). All serv
 ### Development Workflow
 
 ```sh
-# Install plasmoid
+# Install plasmoid (self-contained — includes C++ helper module)
 kpackagetool6 -t Plasma/Applet -i package/
 
-# Update after changes
+# Update after changes to QML/Package files
+kpackagetool6 -t Plasma/Applet -u package/
+
+# Update after C++ helper changes
+cmake --build build -j$(nproc)
 kpackagetool6 -t Plasma/Applet -u package/
 
 # Remove
 kpackagetool6 -t Plasma/Applet -r org.kde.lingua-spanner
 
-# Test in isolation (no plasma restart needed)
-plasmoidviewer -a package/
-
 # Test just popup (no plasma restart needed)
 plasmawindowed org.kde.lingua-spanner
 
 # ── Full refresh cycle (for panel/widget testing) ──────────
-# After kpackagetool6 -u, run BOTH:
-rm -rf ~/.cache/libqmlcache/              # 1. clear QML compiled cache
-systemctl --user restart plasma-plasmashell  # 2. restart Plasma shell to pick up new files
+# After update, run BOTH:
+rm -rf ~/.cache/libqmlcache/
+systemctl --user restart plasma-plasmashell
 
-# NOTE: The restart is REQUIRED after updating if you want to test the widget
-#       live on the panel/desktop. `plasmashell` caches the entire KPackage
-#       at load time; `kpackagetool6 -u` updates the files on disk but does
-#       NOT trigger a reload of the running instance.
+# NOTE: The restart is REQUIRED after updating to see changes
+#       live on the panel. `plasmashell` caches KPackage at
+#       load time; `kpackagetool6 -u` only updates files on disk.
 
 # Config UI development
 systemsettings kcm_plasmoid_config ./package/
 ```
+
+### C++ Helper Module
+
+The `LinguaSpannerHelper` QML module (in `package/contents/ui/LinguaSpannerHelper/`) wraps `QProcess` for calling `xclip` synchronously from QML.
+
+- **Source**: `src/ProcessHelper.h` / `.cpp`
+- **Build**: `cmake --build build -j$(nproc)` (Qt6 only, no KF6 needed)
+- **After rebuild**: copy `.so` files to package:
+  ```sh
+  mkdir -p package/contents/ui/LinguaSpannerHelper
+  cp -a build/liblingua_spanner_helper.so \
+        ~/.local/lib/qml/LinguaSpannerHelper/lingua_spanner_helperplugin.so \
+        ~/.local/lib/qml/LinguaSpannerHelper/qmldir \
+        ~/.local/lib/qml/LinguaSpannerHelper/*.qmltypes \
+        package/contents/ui/LinguaSpannerHelper/
+  cd package/contents/ui/LinguaSpannerHelper
+  ln -sf lingua_spanner_helperplugin.so liblingua_spanner_helperplugin.so
+  ```
+- **Self-contained**: The module is bundled in the plasmoid package (contents/ui/LinguaSpannerHelper/). No system-wide install needed.
+- **QML import**: `import LinguaSpannerHelper` from `main.qml`
 
 ### Youdao Web Scraping
 
