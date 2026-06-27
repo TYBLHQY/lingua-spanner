@@ -31,8 +31,8 @@ PlasmoidItem {
     property bool translating: false
     property string errorMessage: ""
 
-    // ── Text picked from focused window (for paste-on-open) ─
-    property string pendingPickText: ""
+    // ── Reference to inputField inside fullRepresentation ───
+    property QtObject p_inputField: null
 
     // ── PasteSelectionHelper (QProcess xclip wrapper) ───────
     PasteSelectionHelper { id: pasteSelectionHelper }
@@ -72,13 +72,38 @@ PlasmoidItem {
 
     // ── Pick text from focused window when panel opens ────
     onExpandedChanged: {
+        console.log("onExpandedChanged: expanded=", root.expanded)
         if (!root.expanded) return
+        Qt.callLater(root.handlePanelOpened)
+    }
+
+    // Also handle initial load (plasmawindowed starts expanded)
+    Component.onCompleted: {
+        console.log("Component.onCompleted: expanded=", root.expanded)
+        if (root.expanded) {
+            Qt.callLater(root.handlePanelOpened)
+        }
+    }
+
+    function handlePanelOpened() {
+        // 1. Read selection
         var picked = pasteSelectionHelper.readSelection()
+        console.log("handlePanelOpened: primary='", picked, "'")
         if (!picked || picked.trim().length === 0) {
             picked = pasteSelectionHelper.readClipboard()
+            console.log("handlePanelOpened: clipboard='", picked, "'")
         }
+
+        // 2. If we have text, paste into input and translate
         if (picked && picked.trim().length > 0) {
-            root.pendingPickText = picked.trim()
+            console.log("handlePanelOpened: pasting '", picked, "'")
+            p_inputField.text = picked.trim()
+            p_inputField.selectAll()
+            root.translate(p_inputField.text)
+        } else {
+            // 3. Otherwise just focus input
+            console.log("handlePanelOpened: focusing input")
+            p_inputField.forceActiveFocus()
         }
     }
 
@@ -125,19 +150,6 @@ PlasmoidItem {
         Layout.minimumHeight: 320
         Layout.preferredWidth: 440
         Layout.preferredHeight: 480
-
-        // Handle panel-open: paste picked text or focus input
-        onVisibleChanged: {
-            if (!visible) return
-            if (root.pendingPickText.length > 0) {
-                inputField.text = root.pendingPickText
-                inputField.selectAll()
-                root.pendingPickText = ""
-                root.translate(inputField.text)
-            } else {
-                inputField.forceActiveFocus()
-            }
-        }
 
         ColumnLayout {
             anchors.fill: parent
@@ -193,6 +205,7 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         placeholderText: i18n("Enter text to translate…")
                         onAccepted: root.translate(text)
+                        Component.onCompleted: root.p_inputField = inputField
                     }
 
                     QQC2.Button {
