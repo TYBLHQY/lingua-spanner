@@ -350,6 +350,9 @@ PlasmoidItem {
                         textRole: "text"
                         valueRole: "value"
 
+                        // Guard to prevent init-time writes to config
+                        property bool _ready: false
+
                         // Sync from config
                         Component.onCompleted: {
                             for (var i = 0; i < model.length; i++) {
@@ -358,9 +361,11 @@ PlasmoidItem {
                                     break
                                 }
                             }
+                            _ready = true
                         }
-                        // Sync to config on change
+                        // Sync to config on user change
                         onCurrentValueChanged: {
+                            if (!_ready) return
                             if (currentValue !== root.translateMode) {
                                 // Clear results
                                 youdaoResult = null
