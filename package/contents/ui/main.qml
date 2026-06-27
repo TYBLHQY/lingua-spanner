@@ -28,6 +28,7 @@ PlasmoidItem {
     property string inputText: ""
     property var youdaoResult: null
     property var deepseekResult: null
+    property var dictionaryResult: null
     property bool translating: false
     property string errorMessage: ""
 
@@ -75,11 +76,14 @@ PlasmoidItem {
         errorMessage = ""
         youdaoResult = null
         deepseekResult = null
+        dictionaryResult = null
 
         var mode = translateMode
 
         if (mode === "youdao") {
             youdaoService.fetch(inputText)
+        } else if (mode === "dictionary") {
+            dictionaryService.fetch(inputText)
         } else {
             // deepseek — check history cache first
             var cached = findInHistory(inputText)
@@ -201,6 +205,19 @@ PlasmoidItem {
         onError: function(msg) {
             translating = false
             root.errorMessage = msg
+        }
+    }
+
+    // ── Free Dictionary API service ──────────────────────────
+    Services.FreeDictionaryApiService {
+        id: dictionaryService
+        onFinished: function(result) {
+            dictionaryResult = result
+            translating = false
+        }
+        onError: function(msg) {
+            dictionaryResult = { error: msg }
+            translating = false
         }
     }
 
@@ -327,6 +344,7 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         model: [
                             { text: i18n("Youdao (web scraping)"), value: "youdao" },
+                            { text: i18n("Free Dictionary API"), value: "dictionary" },
                             { text: i18n("DeepSeek API"), value: "deepseek" }
                         ]
                         textRole: "text"
@@ -347,6 +365,7 @@ PlasmoidItem {
                                 // Clear results
                                 youdaoResult = null
                                 deepseekResult = null
+                                dictionaryResult = null
                                 // Write to config
                                 Plasmoid.configuration.translateMode = currentValue
                                 // Auto-translate if input is not empty
@@ -548,6 +567,157 @@ PlasmoidItem {
 
                                             PlasmaComponents3.Label {
                                                 id: trLabel
+                                                anchors {
+                                                    left: parent.left
+                                                    right: parent.right
+                                                    margins: Kirigami.Units.smallSpacing
+                                                }
+                                                text: formatDefinition(modelData)
+                                                textFormat: Text.StyledText
+                                                wrapMode: Text.WordWrap
+                                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // ── Free Dictionary API result ────────────
+                    Rectangle {
+                        visible: dictionaryResult !== null && root.translateMode === "dictionary"
+                        Layout.fillWidth: true
+                        radius: Kirigami.Units.smallSpacing
+                        color: Kirigami.Theme.backgroundColor
+                        border.color: Kirigami.Theme.disabledTextColor
+                        border.width: 1
+                        implicitHeight: dictCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+
+                        ColumnLayout {
+                            id: dictCol
+                            anchors {
+                                fill: parent
+                                margins: Kirigami.Units.smallSpacing
+                            }
+                            spacing: Kirigami.Units.smallSpacing
+
+                            // ── No result / error notice ──────
+                            PlasmaComponents3.Label {
+                                visible: dictionaryResult && (
+                                    dictionaryResult.error ||
+                                    dictionaryResult.exp.length === 0)
+                                text: dictionaryResult && dictionaryResult.error
+                                    ? dictionaryResult.error
+                                    : i18n("No dictionary results found.")
+                                color: dictionaryResult && dictionaryResult.error
+                                    ? Kirigami.Theme.negativeTextColor
+                                    : Kirigami.Theme.disabledTextColor
+                                font.italic: true
+                                Layout.fillWidth: true
+                            }
+
+                            // ── Phonetic text ────────────────
+                            PlasmaComponents3.Label {
+                                visible: dictionaryResult && dictionaryResult.phonetic
+                                    && dictionaryResult.phonetic.length > 0
+                                text: dictionaryResult.phonetic
+                                font.bold: true
+                                color: Kirigami.Theme.neutralTextColor
+                                font.pointSize: Kirigami.Theme.defaultFont.pointSize + 1
+                                Layout.fillWidth: true
+                            }
+
+                            // ── Origin / etymology ────────────
+                            PlasmaComponents3.Label {
+                                visible: dictionaryResult && dictionaryResult.origin
+                                    && dictionaryResult.origin.length > 0
+                                text: i18n("Origin: %1", dictionaryResult.origin)
+                                font.italic: true
+                                color: Kirigami.Theme.disabledTextColor
+                                wrapMode: Text.WordWrap
+                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                Layout.fillWidth: true
+                            }
+
+                            // ── Audio bar ──────────────────
+                            Rectangle {
+                                visible: dictionaryResult && dictionaryResult.audio
+                                    && dictionaryResult.audio.length > 0
+                                Layout.fillWidth: true
+                                color: Kirigami.Theme.backgroundColor
+                                border.color: Kirigami.Theme.disabledTextColor
+                                border.width: 1
+                                radius: Kirigami.Units.smallSpacing
+                                implicitHeight: dictAudioRow.implicitHeight + Kirigami.Units.smallSpacing
+
+                                RowLayout {
+                                    id: dictAudioRow
+                                    anchors {
+                                        fill: parent
+                                        leftMargin: Kirigami.Units.smallSpacing
+                                        rightMargin: Kirigami.Units.smallSpacing
+                                    }
+                                    spacing: Kirigami.Units.smallSpacing
+
+                                    Repeater {
+                                        model: dictionaryResult ? dictionaryResult.audio : []
+
+                                        delegate: QQC2.Button {
+                                            id: dictAudioBtn
+                                            required property var modelData
+                                            text: modelData.text ? modelData.text : i18n("Play")
+                                            icon.name: "media-playback-start"
+                                            flat: true
+                                            Accessible.name: i18n("Play pronunciation")
+                                            Layout.fillWidth: true
+                                            onClicked: {
+                                                dictAudioPlayer.source = modelData.url
+                                                dictAudioPlayer.play()
+                                            }
+                                        }
+                                    }
+                                }
+
+                                MediaPlayer {
+                                    id: dictAudioPlayer
+                                    audioOutput: AudioOutput {}
+                                    onErrorOccurred: console.log("dictAudioPlayer error:", error, errorString)
+                                }
+                            }
+
+                            // ── Definitions (exp) ──────────
+                            Repeater {
+                                model: dictionaryResult ? dictionaryResult.exp : []
+
+                                delegate: ColumnLayout {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    spacing: Kirigami.Units.smallSpacing
+
+                                    // Part of speech label
+                                    PlasmaComponents3.Label {
+                                        visible: modelData.po.length > 0
+                                        text: modelData.po
+                                        font.bold: true
+                                        color: Kirigami.Theme.neutralTextColor
+                                        font.pointSize: Kirigami.Theme.defaultFont.pointSize
+                                    }
+
+                                    // Definitions
+                                    Repeater {
+                                        model: modelData.tr
+
+                                        delegate: Rectangle {
+                                            required property string modelData
+                                            Layout.fillWidth: true
+                                            Layout.leftMargin: Kirigami.Units.smallSpacing
+                                            color: Kirigami.Theme.backgroundColor
+                                            radius: Kirigami.Units.smallSpacing
+                                            implicitHeight: dictTrLabel.implicitHeight + Kirigami.Units.smallSpacing
+
+                                            PlasmaComponents3.Label {
+                                                id: dictTrLabel
                                                 anchors {
                                                     left: parent.left
                                                     right: parent.right
