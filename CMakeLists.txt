@@ -6,8 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" CACHE PATH "Install prefix")
 
-# ── Qt6 QML module (ProcessHelper — no KF6 needed) ─────────
-find_package(Qt6 6.7 REQUIRED COMPONENTS Core Qml)
+# ── Qt6 QML module (ProcessHelper + AtspiCursorReader) ────
+# No KF6 needed — Qt6::Core + Qt6::DBus + Qt6::Qml only.
+find_package(Qt6 6.7 REQUIRED COMPONENTS Core DBus Qml)
 
 qt_policy(SET QTP0001 NEW)
 
@@ -17,12 +18,18 @@ qt_add_qml_module(lingua_spanner_helper
     SOURCES
         src/ProcessHelper.h
         src/ProcessHelper.cpp
+        src/AtspiCursorReader.h
+        src/AtspiCursorReader.cpp
     OUTPUT_DIRECTORY "${CMAKE_INSTALL_PREFIX}/lib/qml/LinguaSpannerHelper"
 )
 
 set_target_properties(lingua_spanner_helperplugin PROPERTIES
     INSTALL_RPATH "$ORIGIN"
     BUILD_RPATH "$ORIGIN"
+)
+
+target_link_libraries(lingua_spanner_helper PRIVATE
+    Qt6::DBus
 )
 
 target_include_directories(lingua_spanner_helper PRIVATE
