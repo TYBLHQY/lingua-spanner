@@ -22,7 +22,10 @@ PlasmoidItem {
     // ── Config shortcuts ────────────────────────────────────
     readonly property string translateMode: Plasmoid.configuration.translateMode || "youdao"
     readonly property string deepseekApiKey: Plasmoid.configuration.deepseekApiKey || ""
-    readonly property string deepseekModel: Plasmoid.configuration.deepseekModel || "deepseek-chat"
+    readonly property string deepseekModel: Plasmoid.configuration.deepseekModel || "deepseek-v4-flash"
+    readonly property double deepseekTemperature: Plasmoid.configuration.deepseekTemperature !== undefined ? Plasmoid.configuration.deepseekTemperature : 1.0
+    readonly property int deepseekMaxTokens: Plasmoid.configuration.deepseekMaxTokens || 4096
+    readonly property double deepseekTopP: Plasmoid.configuration.deepseekTopP !== undefined ? Plasmoid.configuration.deepseekTopP : 1.0
     readonly property string deepseekSystemPrompt: Plasmoid.configuration.deepseekSystemPrompt || ""
 
     // ── Translation state ───────────────────────────────────
@@ -96,7 +99,7 @@ PlasmoidItem {
                 errorMessage = i18n("DeepSeek API key not configured")
                 translating = false
             } else {
-                deepseekService.translate(inputText, deepseekApiKey, deepseekModel, deepseekSystemPrompt)
+                deepseekService.translate(inputText, deepseekApiKey, deepseekModel, deepseekSystemPrompt, deepseekTemperature, deepseekMaxTokens, deepseekTopP)
             }
         }
     }

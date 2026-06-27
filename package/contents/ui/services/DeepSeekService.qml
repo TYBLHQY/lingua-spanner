@@ -9,7 +9,7 @@ QtObject {
     signal finished(var result)
     signal error(string message)
 
-    function translate(text, apiKey, model, systemPrompt) {
+    function translate(text, apiKey, model, systemPrompt, temperature, maxTokens, topP) {
         if (!text || text.trim().length === 0) {
             error("Empty text")
             return
@@ -25,8 +25,8 @@ QtObject {
             ? systemPrompt.trim()
             : "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
 
-        var body = JSON.stringify({
-            model: model || "deepseek-chat",
+        var body = {
+            model: model || "deepseek-v4-flash",
             messages: [
                 {
                     role: "system",
@@ -37,10 +37,20 @@ QtObject {
                     content: text
                 }
             ],
-            temperature: 0.3,
-            max_tokens: 4096,
             stream: false
-        })
+        }
+
+        if (temperature !== undefined && temperature !== null && temperature >= 0 && temperature <= 2) {
+            body.temperature = temperature
+        }
+        if (maxTokens !== undefined && maxTokens !== null && maxTokens >= 1) {
+            body.max_tokens = maxTokens
+        }
+        if (topP !== undefined && topP !== null && topP > 0 && topP <= 1) {
+            body.top_p = topP
+        }
+
+        body = JSON.stringify(body)
 
         var xhr = new XMLHttpRequest()
         xhr.open("POST", url)
