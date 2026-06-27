@@ -414,24 +414,39 @@ PlasmoidItem {
                             }
 
                             // ── Audio bar ──────────────────
-                            Flow {
+                            Rectangle {
                                 visible: youdaoResult && youdaoResult.audio && youdaoResult.audio.length > 0
                                 Layout.fillWidth: true
-                                spacing: Kirigami.Units.smallSpacing
+                                color: Kirigami.Theme.backgroundColor
+                                border.color: Kirigami.Theme.disabledTextColor
+                                border.width: 1
+                                radius: Kirigami.Units.smallSpacing
+                                implicitHeight: audioRow.implicitHeight + Kirigami.Units.smallSpacing
 
-                                Repeater {
-                                    model: youdaoResult ? youdaoResult.audio : []
+                                RowLayout {
+                                    id: audioRow
+                                    anchors {
+                                        fill: parent
+                                        leftMargin: Kirigami.Units.smallSpacing
+                                        rightMargin: Kirigami.Units.smallSpacing
+                                    }
+                                    spacing: Kirigami.Units.smallSpacing
 
-                                    delegate: QQC2.Button {
-                                        id: audioBtn
-                                        required property var modelData
-                                        text: modelData.text
-                                        icon.name: "media-playback-start"
-                                        flat: true
-                                        Accessible.name: i18n("Play pronunciation")
-                                        onClicked: {
-                                            audioPlayer.source = modelData.url
-                                            audioPlayer.play()
+                                    Repeater {
+                                        model: youdaoResult ? youdaoResult.audio : []
+
+                                        delegate: QQC2.Button {
+                                            id: audioBtn
+                                            required property var modelData
+                                            text: modelData.text
+                                            icon.name: "media-playback-start"
+                                            flat: true
+                                            Accessible.name: i18n("Play pronunciation")
+                                            Layout.fillWidth: true
+                                            onClicked: {
+                                                audioPlayer.source = modelData.url
+                                                audioPlayer.play()
+                                            }
                                         }
                                     }
                                 }
