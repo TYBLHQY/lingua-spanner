@@ -92,6 +92,10 @@ PlasmoidItem {
         }
     }
 
+    PasteSelectionHelper {
+        id: pasteSelectionHelper
+    }
+
     // ── Pick text from focused window (shortcut 2) ─────────
     function pickAndTranslate() {
         // Try primary selection first, fallback to clipboard
@@ -106,17 +110,14 @@ PlasmoidItem {
     }
 
     onExpandedChanged: {
-        if (expanded && pendingPickText.length > 0) {
-            // After panel opens, paste text and select all
-            inputField.text = pendingPickText
-            inputField.selectAll()
-            pendingPickText = ""
-            // Auto-translate
-            translate(inputField.text)
-        } else if (expanded) {
-            inputField.forceActiveFocus()
+        // Delegate to fullRepresentation — it handles inputField interactions
+        if (root.expanded) {
+            root._panelJustOpened = true
         }
     }
+
+    // Flag: fullRepresentation should check pendingPickText on next show
+    property bool _panelJustOpened: false
 
     // ── Compact: taskbar icon ───────────────────────────────
     compactRepresentation: Kirigami.Icon {
@@ -136,6 +137,20 @@ PlasmoidItem {
         Layout.minimumHeight: 320
         Layout.preferredWidth: 440
         Layout.preferredHeight: 480
+
+        // Handle panel-open actions (shortcut 1 focus / shortcut 2 paste)
+        onVisibleChanged: {
+            if (!visible) return
+            root._panelJustOpened = false
+            if (root.pendingPickText.length > 0) {
+                inputField.text = root.pendingPickText
+                inputField.selectAll()
+                root.pendingPickText = ""
+                root.translate(inputField.text)
+            } else {
+                inputField.forceActiveFocus()
+            }
+        }
 
         ColumnLayout {
             anchors.fill: parent

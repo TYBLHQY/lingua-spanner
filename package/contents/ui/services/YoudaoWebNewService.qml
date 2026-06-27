@@ -2,8 +2,6 @@
 // Scrapes dict.youdao.com for word definitions
 // Reference: youdao-web-new-scraping-rules.md
 
-pragma Singleton
-
 import QtQuick
 
 QtObject {
@@ -29,7 +27,7 @@ QtObject {
             if (xhr.readyState !== XMLHttpRequest.DONE) return
 
             if (xhr.status === 200) {
-                var result = parseHTML(xhr.responseText)
+                var result = parseHTML(xhr.responseText, word)
                 finished(result)
             } else {
                 error("Youdao returned HTTP " + xhr.status)
@@ -48,7 +46,7 @@ QtObject {
         xhr.send()
     }
 
-    function parseHTML(html) {
+    function parseHTML(html, word) {
         // Strip data-v-xxx attributes for easier matching
         html = html.replace(/\sdata-v-\w+=["'][^"']*["']/g, "")
 

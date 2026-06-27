@@ -2,8 +2,6 @@
 // Reads text from the system's primary selection or clipboard
 // Used by shortcut 2 to pick text from the focused window
 
-pragma Singleton
-
 import QtQuick
 
 QtObject {

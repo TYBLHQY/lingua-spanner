@@ -1,8 +1,6 @@
 // ── DeepSeek API Translation Service ───────────────────────
 // Calls api.deepseek.com/chat/completions for AI translation
 
-pragma Singleton
-
 import QtQuick
 
 QtObject {
