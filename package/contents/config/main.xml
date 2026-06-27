@@ -26,9 +26,6 @@
     <entry name="deepseekSystemPrompt" type="String">
       <default>You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations.</default>
     </entry>
-    <entry name="autoDetectLang" type="Bool">
-      <default>true</default>
-    </entry>
     <entry name="shortcutOpen" type="String">
       <default>Meta+1</default>
     </entry>

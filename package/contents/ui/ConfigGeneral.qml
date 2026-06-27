@@ -24,8 +24,6 @@ KCMUtils.SimpleKCM {
     property int cfg_deepseekMaxTokensDefault: 4096
     property double cfg_deepseekTopP: 1.0
     property double cfg_deepseekTopPDefault: 1.0
-    property alias cfg_autoDetectLang: autoDetectCheck.checked
-    property bool cfg_autoDetectLangDefault: true
     property string cfg_shortcutOpen: "Meta+1"
     property string cfg_shortcutOpenDefault: "Meta+1"
     property string cfg_shortcutPick: "Meta+2"
@@ -228,12 +226,6 @@ KCMUtils.SimpleKCM {
             text: i18n("Other")
             Layout.fillWidth: true
             Layout.topMargin: Kirigami.Units.smallSpacing
-        }
-
-        QQC2.CheckBox {
-            id: autoDetectCheck
-            text: i18n("Auto-detect language")
-            checked: true
         }
 
         // ── Security note ────────────────────────────────────
