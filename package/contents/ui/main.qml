@@ -23,6 +23,7 @@ PlasmoidItem {
     readonly property string translateMode: Plasmoid.configuration.translateMode || "youdao"
     readonly property string deepseekApiKey: Plasmoid.configuration.deepseekApiKey || ""
     readonly property string deepseekModel: Plasmoid.configuration.deepseekModel || "deepseek-chat"
+    readonly property string deepseekSystemPrompt: Plasmoid.configuration.deepseekSystemPrompt || ""
 
     // ── Translation state ───────────────────────────────────
     property string inputText: ""
@@ -95,7 +96,7 @@ PlasmoidItem {
                 errorMessage = i18n("DeepSeek API key not configured")
                 translating = false
             } else {
-                deepseekService.translate(inputText, deepseekApiKey, deepseekModel)
+                deepseekService.translate(inputText, deepseekApiKey, deepseekModel, deepseekSystemPrompt)
             }
         }
     }

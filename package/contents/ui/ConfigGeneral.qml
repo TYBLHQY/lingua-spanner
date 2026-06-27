@@ -16,6 +16,8 @@ KCMUtils.SimpleKCM {
     property string cfg_deepseekApiKeyDefault: ""
     property alias cfg_deepseekModel: modelField.text
     property string cfg_deepseekModelDefault: "deepseek-chat"
+    property alias cfg_deepseekSystemPrompt: promptField.text
+    property string cfg_deepseekSystemPromptDefault: "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
     property alias cfg_autoDetectLang: autoDetectCheck.checked
     property bool cfg_autoDetectLangDefault: true
     property string cfg_shortcutOpen: "Meta+1"
@@ -61,6 +63,22 @@ KCMUtils.SimpleKCM {
                 id: modelField
                 Layout.fillWidth: true
                 placeholderText: "deepseek-chat"
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            PlasmaComponents3.Label {
+                text: i18n("System Prompt:")
+            }
+
+            QQC2.TextArea {
+                id: promptField
+                Layout.fillWidth: true
+                Layout.minimumHeight: Kirigami.Units.gridUnit * 4
+                placeholderText: i18n("Enter system prompt for the AI translator…")
+                wrapMode: Text.WordWrap
             }
         }
 

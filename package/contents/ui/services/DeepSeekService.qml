@@ -9,7 +9,7 @@ QtObject {
     signal finished(var result)
     signal error(string message)
 
-    function translate(text, apiKey, model) {
+    function translate(text, apiKey, model, systemPrompt) {
         if (!text || text.trim().length === 0) {
             error("Empty text")
             return
@@ -20,12 +20,17 @@ QtObject {
         }
 
         var url = "https://api.deepseek.com/chat/completions"
+
+        var systemContent = systemPrompt && systemPrompt.trim().length > 0
+            ? systemPrompt.trim()
+            : "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
+
         var body = JSON.stringify({
             model: model || "deepseek-chat",
             messages: [
                 {
                     role: "system",
-                    content: "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
+                    content: systemContent
                 },
                 {
                     role: "user",
