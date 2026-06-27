@@ -31,12 +31,6 @@ QString ProcessHelper::readProcessOutput(const QString &program,
         cmdLine += " '" + a + "'";
     debugLog(QString("START %1 timeout=%2").arg(cmdLine).arg(timeoutMs).toLatin1());
 
-    // Check if the program exists
-    if (!QFileInfo::exists(program)) {
-        debugLog(QString("PROGRAM NOT FOUND: %1").arg(program).toLatin1());
-        return {};
-    }
-
     QProcess proc;
     proc.start(program, args);
 

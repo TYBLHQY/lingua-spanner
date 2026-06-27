@@ -71,7 +71,12 @@ PlasmoidItem {
     // ── Pick text from focused window when panel opens ────
     onExpandedChanged: {
         console.log("onExpandedChanged: expanded=", root.expanded)
-        if (!root.expanded) return
+        if (!root.expanded) {
+            // Reset click flag when panel closes, so next keyboard
+            // shortcut correctly triggers selection reading.
+            root._openedByClick = false
+            return
+        }
         Qt.callLater(root.handlePanelOpened)
     }
 
