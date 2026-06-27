@@ -48,10 +48,10 @@ PlasmoidItem {
 
         var mode = translateMode
 
-        if (mode === "youdao" || mode === "both") {
+        if (mode === "youdao") {
             youdaoService.fetch(inputText)
-        }
-        if (mode === "deepseek" || mode === "both") {
+        } else {
+            // deepseek
             if (!deepseekApiKey) {
                 deepseekResult = { error: i18n("DeepSeek API key not configured") }
                 checkDone()
@@ -62,12 +62,7 @@ PlasmoidItem {
     }
 
     function checkDone() {
-        var mode = translateMode
-        var youdaoDone = (mode === "deepseek") || youdaoResult !== null
-        var dsDone = (mode === "youdao") || deepseekResult !== null
-        if (youdaoDone && dsDone) {
-            translating = false
-        }
+        translating = false
     }
 
     // ── Pick text from focused window when panel opens ────

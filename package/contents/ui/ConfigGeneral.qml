@@ -10,10 +10,23 @@ KCMUtils.SimpleKCM {
     id: page
 
     // ── KConfig XT bindings ───────────────────────────────────
-    property alias cfg_translateMode: modeCombo.currentValue
+    // NOTE: ComboBox uses manual sync (not alias) because
+    // currentValue + property alias doesn't init reliably.
+    property string cfg_translateMode: "youdao"
     property alias cfg_deepseekApiKey: apiKeyField.text
     property alias cfg_deepseekModel: modelField.text
     property alias cfg_autoDetectLang: autoDetectCheck.checked
+
+    // Sync config → ComboBox on load, ComboBox → config on change
+    onCfg_translateModeChanged: {
+        for (var i = 0; i < modeCombo.model.length; i++) {
+            if (modeCombo.model[i].value === cfg_translateMode) {
+                modeCombo.currentIndex = i
+                return
+            }
+        }
+    }
+    onCfg_deepseekApiKeyChanged: console.log("dsApiKey changed")
 
     // ── UI ────────────────────────────────────────────────────
     ColumnLayout {
@@ -38,12 +51,18 @@ KCMUtils.SimpleKCM {
                 id: modeCombo
                 model: [
                     { text: i18n("Youdao (web scraping)"), value: "youdao" },
-                    { text: i18n("DeepSeek API"), value: "deepseek" },
-                    { text: i18n("Both"), value: "both" }
+                    { text: i18n("DeepSeek API"), value: "deepseek" }
                 ]
                 textRole: "text"
                 valueRole: "value"
                 Layout.fillWidth: true
+
+                // Combo change → save to config
+                onCurrentValueChanged: {
+                    if (page.cfg_translateMode !== currentValue) {
+                        page.cfg_translateMode = currentValue
+                    }
+                }
             }
         }
 
