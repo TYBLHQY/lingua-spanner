@@ -295,8 +295,9 @@ PlasmoidItem {
                     }
 
                     QQC2.Button {
-                        text: i18n("Translate")
                         icon.name: "translate"
+                        implicitWidth: Kirigami.Units.iconSizes.medium
+                        implicitHeight: Kirigami.Units.iconSizes.medium
                         enabled: inputField.text.trim().length > 0 && !root.translating
                         onClicked: root.translate(inputField.text)
                     }
@@ -317,10 +318,6 @@ PlasmoidItem {
                     id: modeRow
                     anchors.left: parent.left
                     anchors.right: parent.right
-
-                    PlasmaComponents3.Label {
-                        text: i18n("Mode:")
-                    }
 
                     QQC2.ComboBox {
                         id: modeCombo
@@ -406,6 +403,15 @@ PlasmoidItem {
                                 margins: Kirigami.Units.smallSpacing
                             }
                             spacing: Kirigami.Units.smallSpacing
+
+                            // ── No result notice ────────────
+                            PlasmaComponents3.Label {
+                                visible: youdaoResult && youdaoResult.exp.length === 0
+                                text: i18n("No dictionary results found.")
+                                color: Kirigami.Theme.disabledTextColor
+                                font.italic: true
+                                Layout.fillWidth: true
+                            }
 
                             // ── Audio bar ──────────────────
                             Flow {
