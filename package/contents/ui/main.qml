@@ -36,7 +36,7 @@ PlasmoidItem {
 
     // ── PasteSelectionHelper (QProcess xclip wrapper) ───────
     PasteSelectionHelper { id: pasteSelectionHelper }
-z
+
     // ── Translation handler ─────────────────────────────────
     function translate(text) {
         if (!text || text.trim().length === 0) return
