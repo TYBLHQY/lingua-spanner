@@ -223,6 +223,47 @@ PlasmoidItem {
         Layout.preferredWidth: 440
         Layout.preferredHeight: 480
 
+        // ── 吸顶加载条 (web 风格) ────────────────────────
+        Rectangle {
+            anchors { top: parent.top; left: parent.left; right: parent.right }
+            height: 3
+            visible: root.translating
+            color: "transparent"
+
+            Rectangle {
+                id: loaderBar
+                width: parent.width * 0.35
+                height: parent.height
+                radius: 1.5
+                color: Kirigami.Theme.highlightColor
+
+                SequentialAnimation on x {
+                    loops: Animation.Infinite
+                    running: root.translating
+
+                    NumberAnimation {
+                        from: 0; to: parent.width - loaderBar.width
+                        duration: 600; easing.type: Easing.InOutCubic
+                    }
+                    PauseAnimation { duration: 200 }
+                    NumberAnimation {
+                        from: parent.width - loaderBar.width; to: 0
+                        duration: 600; easing.type: Easing.InOutCubic
+                    }
+                    PauseAnimation { duration: 200 }
+                }
+
+                SequentialAnimation on opacity {
+                    loops: Animation.Infinite
+                    running: root.translating
+
+                    NumberAnimation { from: 0.3; to: 1.0; duration: 400 }
+                    PauseAnimation { duration: 600 }
+                    NumberAnimation { from: 1.0; to: 0.3; duration: 400 }
+                }
+            }
+        }
+
         ColumnLayout {
             anchors.fill: parent
             spacing: 0
@@ -258,13 +299,6 @@ PlasmoidItem {
                         icon.name: "translate"
                         enabled: inputField.text.trim().length > 0 && !root.translating
                         onClicked: root.translate(inputField.text)
-                    }
-
-                    PlasmaComponents3.BusyIndicator {
-                        visible: root.translating
-                        running: root.translating
-                        implicitWidth: Kirigami.Units.iconSizes.smallMedium
-                        implicitHeight: Kirigami.Units.iconSizes.smallMedium
                     }
                 }
             }
