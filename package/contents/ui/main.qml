@@ -278,7 +278,7 @@ PlasmoidItem {
 
                             // ── Audio bar ──────────────────
                             Flow {
-                                visible: youdaoResult.audio && youdaoResult.audio.length > 0
+                                visible: youdaoResult && youdaoResult.audio && youdaoResult.audio.length > 0
                                 Layout.fillWidth: true
                                 spacing: Kirigami.Units.smallSpacing
 
@@ -309,7 +309,7 @@ PlasmoidItem {
 
                             // ── Exam type tags ─────────────
                             Flow {
-                                visible: youdaoResult.examType && youdaoResult.examType.length > 0
+                                visible: youdaoResult && youdaoResult.examType && youdaoResult.examType.length > 0
                                 Layout.fillWidth: true
                                 spacing: Kirigami.Units.smallSpacing
 
@@ -335,7 +335,7 @@ PlasmoidItem {
 
                             // ── Forms ──────────────────────
                             Flow {
-                                visible: youdaoResult.form && youdaoResult.form.length > 0
+                                visible: youdaoResult && youdaoResult.form && youdaoResult.form.length > 0
                                 Layout.fillWidth: true
                                 spacing: Kirigami.Units.smallSpacing
 

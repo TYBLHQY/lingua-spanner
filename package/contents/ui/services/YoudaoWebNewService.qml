@@ -124,6 +124,18 @@ QtObject {
             }
         }
 
+        // Chinese word-exp-ce fallback: point without word-exp_tran
+        if (exp.length === 0) {
+            var ceFallbackRegex = /<li[^>]*word-exp-ce[^>]*>.*?class="point"[^>]*>([\s\S]*?)<\/a>/gi
+            while ((match = ceFallbackRegex.exec(html)) !== null) {
+                var pointText = match[1].trim()
+                if (pointText.length > 0 && !seen[pointText]) {
+                    seen[pointText] = true
+                    exp.push({ po: "", tr: [pointText] })
+                }
+            }
+        }
+
         // Fallback: .trans-content (machine translation)
         if (exp.length === 0) {
             var fanyiMatch = html.match(/class="trans-content"[^>]*>([\s\S]*?)<\/div>/i)
