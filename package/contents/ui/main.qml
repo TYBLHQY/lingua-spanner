@@ -132,11 +132,6 @@ PlasmoidItem {
         source: "crow-translate"
         implicitWidth: Kirigami.Units.iconSizes.small
         implicitHeight: Kirigami.Units.iconSizes.small
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: Plasmoid.activated()
-        }
     }
 
     // ── Full: popup panel ───────────────────────────────────
