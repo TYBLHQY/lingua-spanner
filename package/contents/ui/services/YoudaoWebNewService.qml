@@ -47,15 +47,38 @@ QtObject {
     }
 
     function parseHTML(html, word) {
-        // Strip data-v-xxx attributes for easier matching
-        html = html.replace(/\sdata-v-\w+=["'][^"']*["']/g, "")
+        // Strip Vue scoped-style data-v-xxx attributes
+        // Bare Vue attributes: data-v-xxxxx (no =value)
+        html = html.replace(/\sdata-v-[a-f0-9]+/g, "")
+        // Also strip data-v-xxx="..." format
+        html = html.replace(/\sdata-v-\w+="[^"]*"/g, "")
+        // Normalize <section> to <div>
+        html = html.replace(/<section/g, "<div").replace(/<\/section>/g, "</div>")
+
+        // Extract .modules content
+        var modStart = html.indexOf('<div class="modules">')
+        if (modStart < 0) return { word: word, exp: [], examType: [], audio: [], form: [] }
+        modStart += '<div class="modules">'.length
+
+        // Track nesting depth to find matching closing </div>
+        var depth = 1, i = modStart
+        while (depth > 0 && i < html.length) {
+            if (html.substr(i, 4) === '<div' && html.substr(i, 5) !== '</div') {
+                var closeTag = html.indexOf('>', i)
+                if (closeTag > 0 && html[closeTag - 1] !== '/') depth++
+            } else if (html.substr(i, 6) === '</div>') {
+                depth--
+            }
+            i++
+        }
+        var mod = html.substring(modStart, depth === 0 ? i - 6 : undefined)
 
         // Extract exp (definition items)
         var exp = []
+        var seen = {}
 
-        // Try English source: .simple .word-exp
-        // <li class="word-exp"><span class="pos">int.</span><span class="trans">释义</span></li>
-        var wordExpRegex = /<li[^>]*class="[^"]*\bword-exp\b[^"]*"[^>]*>.*?<span[^>]*class="pos"[^>]*>([\s\S]*?)<\/span>.*?<span[^>]*class="trans"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<\/li>/gi
+        // Try English source: .word-exp
+        var wordExpRegex = /<li[^>]*word-exp[^>]*>.*?class="pos"[^>]*>([\s\S]*?)<\/span>.*?class="trans"[^>]*>([\s\S]*?)<\/span>/gi
         var match
         var seen = {} // dedup
 
@@ -81,10 +104,9 @@ QtObject {
             }
         }
 
-        // If no English results, try Chinese source: .simple .word-exp-ce
+        // If no English results, try Chinese source: .word-exp-ce
         if (exp.length === 0) {
-            // <li class="word-exp-ce ..."><span class="col1 index">1</span>...<a class="point">apple</a>...<div class="word-exp_tran">苹果；</div></li>
-            var wordExpCeRegex = /<li[^>]*class="[^"]*\bword-exp-ce\b[^"]*"[^>]*>[\s\S]*?<a[^>]*class="point"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<div[^>]*class="word-exp_tran"[^>]*>([\s\S]*?)<\/div>/gi
+            var wordExpCeRegex = /<li[^>]*word-exp-ce[^>]*>.*?class="point"[^>]*>([\s\S]*?)<\/a>.*?class="word-exp_tran[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
 
             while ((match = wordExpCeRegex.exec(html)) !== null) {
                 po = match[1].trim()
@@ -102,13 +124,16 @@ QtObject {
             }
         }
 
-        // Fallback: .fanyi .trans-content
+        // Fallback: .trans-content (machine translation)
         if (exp.length === 0) {
-            var fanyiRegex = /<div[^>]*class="fanyi"[^>]*>[\s\S]*?<div[^>]*class="trans-content"[^>]*>([\s\S]*?)<\/div>/i
-            var fanyiMatch = fanyiRegex.exec(html)
+            var fanyiMatch = html.match(/class="trans-content"[^>]*>([\s\S]*?)<\/div>/i)
             if (fanyiMatch) {
-                var fanyiText = fanyiMatch[1].trim()
-                exp.push({ po: "", tr: [fanyiText] })
+                var fanyiText = fanyiMatch[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()
+                // Remove garbage suffix: 以上为机器翻译结果...
+                fanyiText = fanyiText.replace(/以上为机器翻译结果.*$/, "").trim()
+                if (fanyiText.length > 0) {
+                    exp.push({ po: "", tr: [fanyiText] })
+                }
             }
         }
 
