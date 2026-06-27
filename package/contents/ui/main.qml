@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
+import QtMultimedia
 
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents3
@@ -38,6 +39,11 @@ PlasmoidItem {
 
     // ── PasteSelectionHelper (QProcess xclip wrapper) ───────
     PasteSelectionHelper { id: pasteSelectionHelper }
+
+    // ── Format definition text (split （notes） into dimmed) ─
+    function formatDefinition(text) {
+        return text.replace(/（[^）]*）/g, function(m) { return '<font color="gray">' + m + '</font>' })
+    }
 
     // ── Translation handler ─────────────────────────────────
     function translate(text) {
@@ -270,19 +276,135 @@ PlasmoidItem {
                             }
                             spacing: Kirigami.Units.smallSpacing
 
-                            PlasmaComponents3.Label {
-                                text: i18n("Youdao Dictionary")
-                                font.bold: true
-                                color: Kirigami.Theme.disabledTextColor
-                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
+                            // ── Audio bar ──────────────────
+                            Flow {
+                                visible: youdaoResult.audio && youdaoResult.audio.length > 0
+                                Layout.fillWidth: true
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Repeater {
+                                    model: youdaoResult ? youdaoResult.audio : []
+
+                                    delegate: Button {
+                                        id: audioBtn
+                                        required property var modelData
+                                        text: modelData.text
+                                        icon.name: "media-playback-start"
+                                        flat: true
+                                        Accessible.name: i18n("Play pronunciation")
+                                        onClicked: {
+                                            audioPlayer.source = modelData.url
+                                            audioPlayer.play()
+                                        }
+                                    }
+                                }
+
+                                MediaPlayer { id: audioPlayer }
                             }
 
-                            // TODO: render exp[], audio, examType, form
-                            PlasmaComponents3.Label {
-                                text: youdaoResult ? JSON.stringify(youdaoResult, null, 2) : ""
-                                wrapMode: Text.WordWrap
+                            // ── Exam type tags ─────────────
+                            Flow {
+                                visible: youdaoResult.examType && youdaoResult.examType.length > 0
                                 Layout.fillWidth: true
-                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Repeater {
+                                    model: youdaoResult ? youdaoResult.examType : []
+
+                                    delegate: Rectangle {
+                                        required property string modelData
+                                        color: Kirigami.Theme.highlightColor
+                                        opacity: 0.6
+                                        radius: Kirigami.Units.smallSpacing
+                                        implicitHeight: examLabel.implicitHeight + Kirigami.Units.smallSpacing
+                                        implicitWidth: examLabel.implicitWidth + Kirigami.Units.smallSpacing
+
+                                        PlasmaComponents3.Label {
+                                            id: examLabel
+                                            anchors.centerIn: parent
+                                            text: modelData
+                                            font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ── Forms ──────────────────────
+                            Flow {
+                                visible: youdaoResult.form && youdaoResult.form.length > 0
+                                Layout.fillWidth: true
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Repeater {
+                                    model: youdaoResult ? youdaoResult.form : []
+
+                                    delegate: Rectangle {
+                                        required property var modelData
+                                        color: Kirigami.Theme.backgroundColor
+                                        border.color: Kirigami.Theme.disabledTextColor
+                                        border.width: 1
+                                        opacity: 0.5
+                                        radius: Kirigami.Units.smallSpacing
+                                        implicitHeight: formLabel.implicitHeight + Kirigami.Units.smallSpacing
+                                        implicitWidth: formLabel.implicitWidth + Kirigami.Units.smallSpacing
+
+                                        PlasmaComponents3.Label {
+                                            id: formLabel
+                                            anchors.centerIn: parent
+                                            text: modelData.form + " " + modelData.type
+                                            font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
+                                            color: Kirigami.Theme.disabledTextColor
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ── Definitions (exp) ──────────
+                            Repeater {
+                                model: youdaoResult ? youdaoResult.exp : []
+
+                                delegate: ColumnLayout {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    spacing: Kirigami.Units.smallSpacing
+
+                                    // Part of speech label
+                                    PlasmaComponents3.Label {
+                                        visible: modelData.po.length > 0
+                                        text: modelData.po
+                                        font.bold: true
+                                        color: Kirigami.Theme.neutralTextColor
+                                        font.pointSize: Kirigami.Theme.defaultFont.pointSize
+                                    }
+
+                                    // Translations
+                                    Repeater {
+                                        model: modelData.tr
+
+                                        delegate: Rectangle {
+                                            required property string modelData
+                                            Layout.fillWidth: true
+                                            Layout.leftMargin: Kirigami.Units.smallSpacing
+                                            color: Kirigami.Theme.alternateBackgroundColor
+                                            radius: Kirigami.Units.smallSpacing
+                                            opacity: 0.4
+                                            implicitHeight: trLabel.implicitHeight + Kirigami.Units.smallSpacing
+
+                                            PlasmaComponents3.Label {
+                                                id: trLabel
+                                                anchors {
+                                                    left: parent.left
+                                                    right: parent.right
+                                                    margins: Kirigami.Units.smallSpacing
+                                                }
+                                                text: formatDefinition(modelData)
+                                                textFormat: Text.StyledText
+                                                wrapMode: Text.WordWrap
+                                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
