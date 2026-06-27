@@ -168,9 +168,12 @@ PlasmoidItem {
             }
         }
 
-        // 2. No selection / click path: focus input, keep existing content
+        // 2. No selection / click path: focus input, select all if not empty
         if (p_inputField) {
             p_inputField.forceActiveFocus()
+            if (p_inputField.text.trim().length > 0) {
+                p_inputField.selectAll()
+            }
         }
     }
 
