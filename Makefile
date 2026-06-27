@@ -59,8 +59,13 @@ install:
 # ── Restart Plasma shell ─────────────────────────────────
 .PHONY: restart
 restart:
-	@echo "==> 重启 plasma-plasmashell…"
-	systemctl --user restart plasma-plasmashell
+	@echo "==> 重启 plasmashell…"
+	@if pidof plasmashell >/dev/null 2>&1; then \
+		kquitapp6 plasmashell 2>/dev/null; \
+		sleep 2; \
+	fi
+	@nohup plasmashell --replace > /dev/null 2>&1 &
+	@sleep 2
 	@echo "     完成。"
 
 # ── Quick test with plasmawindowed (不会重启面板) ──────────

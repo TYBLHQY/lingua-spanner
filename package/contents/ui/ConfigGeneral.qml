@@ -13,9 +13,19 @@ KCMUtils.SimpleKCM {
     // NOTE: ComboBox uses manual sync (not alias) because
     // currentValue + property alias doesn't init reliably.
     property string cfg_translateMode: "youdao"
+    property string cfg_translateModeDefault: "youdao"
     property alias cfg_deepseekApiKey: apiKeyField.text
+    property string cfg_deepseekApiKeyDefault: ""
     property alias cfg_deepseekModel: modelField.text
+    property string cfg_deepseekModelDefault: "deepseek-chat"
     property alias cfg_autoDetectLang: autoDetectCheck.checked
+    property bool cfg_autoDetectLangDefault: true
+    // shortcutOpen/Pick are registered in main.xml but handled
+    // by Plasma framework, not ConfigGeneral
+    property string cfg_shortcutOpen: "Meta+1"
+    property string cfg_shortcutOpenDefault: "Meta+1"
+    property string cfg_shortcutPick: "Meta+2"
+    property string cfg_shortcutPickDefault: "Meta+2"
 
     // Sync config → ComboBox on load, ComboBox → config on change
     onCfg_translateModeChanged: {

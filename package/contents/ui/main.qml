@@ -34,6 +34,9 @@ PlasmoidItem {
     // ── Reference to inputField inside fullRepresentation ───
     property QtObject p_inputField: null
 
+    // ── Distinguish click (just toggle) from shortcut (pick+paste)
+    property bool _openedByClick: false
+
     // ── PasteSelectionHelper (QProcess xclip wrapper) ───────
     PasteSelectionHelper { id: pasteSelectionHelper }
 
@@ -81,23 +84,30 @@ PlasmoidItem {
     }
 
     function handlePanelOpened() {
-        // 1. Read selection
-        var picked = pasteSelectionHelper.readSelection()
-        console.log("handlePanelOpened: primary='", picked, "'")
-        if (!picked || picked.trim().length === 0) {
-            picked = pasteSelectionHelper.readClipboard()
-            console.log("handlePanelOpened: clipboard='", picked, "'")
+        // 1. Try to read selection (only for shortcut path)
+        var fromShortcut = !root._openedByClick
+        root._openedByClick = false
+
+        if (fromShortcut) {
+            var picked = pasteSelectionHelper.readSelection()
+            console.log("handlePanelOpened: primary='", picked, "'")
+            if (!picked || picked.trim().length === 0) {
+                picked = pasteSelectionHelper.readClipboard()
+                console.log("handlePanelOpened: clipboard='", picked, "'")
+            }
+
+            // If we have text, paste into input and translate
+            if (picked && picked.trim().length > 0) {
+                console.log("handlePanelOpened: pasting '", picked, "'")
+                p_inputField.text = picked.trim()
+                p_inputField.selectAll()
+                root.translate(p_inputField.text)
+                return
+            }
         }
 
-        // 2. If we have text, paste into input and translate
-        if (picked && picked.trim().length > 0) {
-            console.log("handlePanelOpened: pasting '", picked, "'")
-            p_inputField.text = picked.trim()
-            p_inputField.selectAll()
-            root.translate(p_inputField.text)
-        } else {
-            // 3. Otherwise just focus input
-            console.log("handlePanelOpened: focusing input")
+        // 2. No selection / click path: focus input, keep existing content
+        if (p_inputField) {
             p_inputField.forceActiveFocus()
         }
     }
@@ -132,6 +142,14 @@ PlasmoidItem {
         source: "crow-translate"
         implicitWidth: Kirigami.Units.iconSizes.small
         implicitHeight: Kirigami.Units.iconSizes.small
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                root._openedByClick = true
+                root.expanded = !root.expanded
+            }
+        }
     }
 
     // ── Full: popup panel ───────────────────────────────────

@@ -24,6 +24,9 @@ public:
     Q_INVOKABLE QString readProcessOutput(const QString &program,
                                           const QStringList &args,
                                           int timeoutMs = 3000);
+
+    /// Log an arbitrary message to journalctl from C++ side
+    Q_INVOKABLE void log(const QString &msg);
 };
 
 #endif // PROCESHELPER_H
