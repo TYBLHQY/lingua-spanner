@@ -5,7 +5,7 @@
         "Name[zh_CN]": "Lingua Spanner",
         "Description": "AI 翻译与查词 — 支持 DeepSeek API 与有道词典爬虫",
         "Description[zh_CN]": "AI 翻译与查词 — 支持 DeepSeek API 翻译与有道词典爬虫释义，快捷键一键取词",
-        "Icon": "accessories-dictionary",
+        "Icon": "crow-translate",
         "Version": "1.0.0",
         "License": "GPL-2.0-or-later",
         "Authors": [

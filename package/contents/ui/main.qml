@@ -129,7 +129,7 @@ PlasmoidItem {
 
     // ── Compact: taskbar icon ───────────────────────────────
     compactRepresentation: Kirigami.Icon {
-        source: "accessories-dictionary"
+        source: "crow-translate"
         implicitWidth: Kirigami.Units.iconSizes.small
         implicitHeight: Kirigami.Units.iconSizes.small
 
