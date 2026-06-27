@@ -31,11 +31,12 @@ PlasmoidItem {
     property bool translating: false
     property string errorMessage: ""
 
-    // ── Reference to inputField inside fullRepresentation ───
-    property QtObject p_inputField: null
-
     // ── PasteSelectionHelper (QProcess xclip wrapper) ───────
     PasteSelectionHelper { id: pasteSelectionHelper }
+
+    // ── Text picked before panel opens — consumed by ─────────
+    //   fullRepresentation.onVisibleChanged
+    property string pendingPickText: ""
 
     // ── Translation handler ─────────────────────────────────
     function translate(text) {
@@ -65,40 +66,25 @@ PlasmoidItem {
         translating = false
     }
 
-    // ── Pick text from focused window when panel opens ────
+    // Called from fullRepresentation when it becomes visible.
+    // Pastes pendingPickText into inputField, or focuses it.
+    function handleFullRepVisible() {
+        // The actual work is inside fullRepresentation.onVisibleChanged
+        // This is just a notification relay — logic runs in fullRep scope
+        // because inputField lives there.
+    }
+
+    // ── Read selection whenever panel opens ─────────────────
     onExpandedChanged: {
         console.log("onExpandedChanged: expanded=", root.expanded)
         if (!root.expanded) return
-        Qt.callLater(root.handlePanelOpened)
-    }
-
-    // Also handle initial load (plasmawindowed starts expanded)
-    Component.onCompleted: {
-        console.log("Component.onCompleted: expanded=", root.expanded)
-        if (root.expanded) {
-            Qt.callLater(root.handlePanelOpened)
-        }
-    }
-
-    function handlePanelOpened() {
-        // 1. Read selection
         var picked = pasteSelectionHelper.readSelection()
-        console.log("handlePanelOpened: primary='", picked, "'")
         if (!picked || picked.trim().length === 0) {
             picked = pasteSelectionHelper.readClipboard()
-            console.log("handlePanelOpened: clipboard='", picked, "'")
         }
-
-        // 2. If we have text, paste into input and translate
         if (picked && picked.trim().length > 0) {
-            console.log("handlePanelOpened: pasting '", picked, "'")
-            p_inputField.text = picked.trim()
-            p_inputField.selectAll()
-            root.translate(p_inputField.text)
-        } else {
-            // 3. Otherwise just focus input
-            console.log("handlePanelOpened: focusing input")
-            p_inputField.forceActiveFocus()
+            root.pendingPickText = picked.trim()
+            console.log("onExpandedChanged: pending='", root.pendingPickText, "'")
         }
     }
 
@@ -135,7 +121,19 @@ PlasmoidItem {
 
         MouseArea {
             anchors.fill: parent
-            onClicked: Plasmoid.activated()
+            onClicked: {
+                // Read selection BEFORE toggling panel open.
+                // This ensures pendingPickText is set before
+                // fullRepresentation becomes visible.
+                var picked = pasteSelectionHelper.readSelection()
+                if (!picked || picked.trim().length === 0) {
+                    picked = pasteSelectionHelper.readClipboard()
+                }
+                if (picked && picked.trim().length > 0) {
+                    root.pendingPickText = picked.trim()
+                }
+                Plasmoid.activated()
+            }
         }
     }
 
@@ -145,6 +143,27 @@ PlasmoidItem {
         Layout.minimumHeight: 320
         Layout.preferredWidth: 440
         Layout.preferredHeight: 480
+
+        // When panel becomes visible: paste pending text or focus
+        onVisibleChanged: {
+            if (!visible) return
+            pasteOrFocus()
+        }
+        Component.onCompleted: {
+            if (visible) pasteOrFocus()
+        }
+        function pasteOrFocus() {
+            if (root.pendingPickText.length > 0) {
+                console.log("fullRep: pasting '", root.pendingPickText, "'")
+                inputField.text = root.pendingPickText
+                inputField.selectAll()
+                root.pendingPickText = ""
+                root.translate(inputField.text)
+            } else {
+                console.log("fullRep: focusing")
+                inputField.forceActiveFocus()
+            }
+        }
 
         ColumnLayout {
             anchors.fill: parent
@@ -200,7 +219,6 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         placeholderText: i18n("Enter text to translate…")
                         onAccepted: root.translate(text)
-                        Component.onCompleted: root.p_inputField = inputField
                     }
 
                     QQC2.Button {
