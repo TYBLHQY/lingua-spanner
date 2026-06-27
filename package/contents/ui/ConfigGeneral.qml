@@ -10,8 +10,6 @@ KCMUtils.SimpleKCM {
     id: page
 
     // ── KConfig XT bindings ───────────────────────────────────
-    // NOTE: ComboBox uses manual sync (not alias) because
-    // currentValue + property alias doesn't init reliably.
     property string cfg_translateMode: "youdao"
     property string cfg_translateModeDefault: "youdao"
     property alias cfg_deepseekApiKey: apiKeyField.text
@@ -20,60 +18,14 @@ KCMUtils.SimpleKCM {
     property string cfg_deepseekModelDefault: "deepseek-chat"
     property alias cfg_autoDetectLang: autoDetectCheck.checked
     property bool cfg_autoDetectLangDefault: true
-    // shortcutOpen/Pick are registered in main.xml but handled
-    // by Plasma framework, not ConfigGeneral
     property string cfg_shortcutOpen: "Meta+1"
     property string cfg_shortcutOpenDefault: "Meta+1"
     property string cfg_shortcutPick: "Meta+2"
     property string cfg_shortcutPickDefault: "Meta+2"
 
-    // Sync config → ComboBox on load, ComboBox → config on change
-    onCfg_translateModeChanged: {
-        for (var i = 0; i < modeCombo.model.length; i++) {
-            if (modeCombo.model[i].value === cfg_translateMode) {
-                modeCombo.currentIndex = i
-                return
-            }
-        }
-    }
-
     // ── UI ────────────────────────────────────────────────────
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
-
-        Kirigami.Heading {
-            level: 3
-            text: i18n("Translate Engine")
-            Layout.fillWidth: true
-            Layout.topMargin: Kirigami.Units.smallSpacing
-        }
-
-        // ── Mode selection ───────────────────────────────────
-        RowLayout {
-            Layout.fillWidth: true
-
-            PlasmaComponents3.Label {
-                text: i18n("Translate mode:")
-            }
-
-            QQC2.ComboBox {
-                id: modeCombo
-                model: [
-                    { text: i18n("Youdao (web scraping)"), value: "youdao" },
-                    { text: i18n("DeepSeek API"), value: "deepseek" }
-                ]
-                textRole: "text"
-                valueRole: "value"
-                Layout.fillWidth: true
-
-                // Combo change → save to config
-                onCurrentValueChanged: {
-                    if (page.cfg_translateMode !== currentValue) {
-                        page.cfg_translateMode = currentValue
-                    }
-                }
-            }
-        }
 
         // ── DeepSeek settings ────────────────────────────────
         Kirigami.Heading {

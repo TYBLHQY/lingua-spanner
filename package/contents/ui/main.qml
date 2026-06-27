@@ -228,43 +228,13 @@ PlasmoidItem {
             spacing: 0
 
             // ════════════════════════════════════════════════
-            //  Header
+            //  Input area (replaces former header)
             // ════════════════════════════════════════════════
             Item {
                 Layout.fillWidth: true
                 Layout.topMargin: Kirigami.Units.largeSpacing
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
-                implicitHeight: headerRow.implicitHeight
-
-                RowLayout {
-                    id: headerRow
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-
-                    Kirigami.Heading {
-                        level: 2
-                        text: i18n("Lingua Spanner")
-                        Layout.fillWidth: true
-                    }
-
-                    PlasmaComponents3.BusyIndicator {
-                        visible: root.translating
-                        running: root.translating
-                        implicitWidth: Kirigami.Units.iconSizes.smallMedium
-                        implicitHeight: Kirigami.Units.iconSizes.smallMedium
-                    }
-                }
-            }
-
-            // ════════════════════════════════════════════════
-            //  Input area
-            // ════════════════════════════════════════════════
-            Item {
-                Layout.fillWidth: true
-                Layout.leftMargin: Kirigami.Units.largeSpacing
-                Layout.rightMargin: Kirigami.Units.largeSpacing
-                Layout.topMargin: Kirigami.Units.smallSpacing
                 implicitHeight: inputRow.implicitHeight
 
                 RowLayout {
@@ -288,6 +258,71 @@ PlasmoidItem {
                         icon.name: "translate"
                         enabled: inputField.text.trim().length > 0 && !root.translating
                         onClicked: root.translate(inputField.text)
+                    }
+
+                    PlasmaComponents3.BusyIndicator {
+                        visible: root.translating
+                        running: root.translating
+                        implicitWidth: Kirigami.Units.iconSizes.smallMedium
+                        implicitHeight: Kirigami.Units.iconSizes.smallMedium
+                    }
+                }
+            }
+
+            // ════════════════════════════════════════════════
+            //  Translate mode selector
+            // ════════════════════════════════════════════════
+            Item {
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.largeSpacing
+                Layout.rightMargin: Kirigami.Units.largeSpacing
+                Layout.topMargin: Kirigami.Units.smallSpacing
+                implicitHeight: modeRow.implicitHeight
+
+                RowLayout {
+                    id: modeRow
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+
+                    PlasmaComponents3.Label {
+                        text: i18n("Mode:")
+                    }
+
+                    QQC2.ComboBox {
+                        id: modeCombo
+                        Layout.fillWidth: true
+                        model: [
+                            { text: i18n("Youdao (web scraping)"), value: "youdao" },
+                            { text: i18n("DeepSeek API"), value: "deepseek" }
+                        ]
+                        textRole: "text"
+                        valueRole: "value"
+
+                        // Sync from config
+                        Component.onCompleted: {
+                            for (var i = 0; i < model.length; i++) {
+                                if (model[i].value === root.translateMode) {
+                                    currentIndex = i
+                                    break
+                                }
+                            }
+                        }
+                        // Sync to config on change
+                        onCurrentValueChanged: {
+                            if (currentValue !== root.translateMode) {
+                                // Clear results
+                                youdaoResult = null
+                                deepseekResult = null
+                                // Write to config
+                                Plasmoid.configuration.translateMode = currentValue
+                                // Auto-translate if input is not empty
+                                Qt.callLater(function() {
+                                    if (inputField.text.trim().length > 0) {
+                                        root.translate(inputField.text)
+                                    }
+                                })
+                            }
+                        }
                     }
                 }
             }
@@ -472,10 +507,10 @@ PlasmoidItem {
                         }
                     }
 
-                    // ── DeepSeek history ──────────────────
+                    // ── DeepSeek history (仅 DeepSeek 模式) ──
                     Repeater {
                         id: histRepeater
-                        model: root.dsHistory
+                        model: root.translateMode === "deepseek" ? root.dsHistory : []
 
                         delegate: Rectangle {
                             required property int index
