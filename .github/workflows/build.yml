@@ -64,13 +64,13 @@ jobs:
 
       - name: Package plasmoid
         run: |
-          cd package && tar czf "../lingua-spanner-${{ steps.version.outputs.version }}.tar.gz" .
+          cd package && tar czf "../lingua-spanner-${{ steps.version.outputs.version }}.plasmoid" .
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: lingua-spanner-${{ steps.version.outputs.version }}
-          path: lingua-spanner-${{ steps.version.outputs.version }}.tar.gz
+          path: lingua-spanner-${{ steps.version.outputs.version }}.plasmoid
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -80,4 +80,4 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --title "Lingua Spanner v${{ steps.version.outputs.version }}" \
             --generate-notes \
-            "lingua-spanner-${{ steps.version.outputs.version }}.tar.gz"
+            "lingua-spanner-${{ steps.version.outputs.version }}.plasmoid"
