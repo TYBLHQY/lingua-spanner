@@ -37,9 +37,6 @@ PlasmoidItem {
     // ── PasteSelectionHelper (QProcess xclip wrapper) ───────
     PasteSelectionHelper { id: pasteSelectionHelper }
 
-    // ── AtspiCursorReader (word under cursor via Python/AT-SPI)
-    AtspiCursorReader { id: atspiReader }
-
     // ── Translation handler ─────────────────────────────────
     function translate(text) {
         if (!text || text.trim().length === 0) return
@@ -92,13 +89,7 @@ PlasmoidItem {
             console.log("handlePanelOpened: clipboard='", picked, "'")
         }
 
-        // 2. If no selection, try AT-SPI word under cursor
-        if (!picked || picked.trim().length === 0) {
-            picked = atspiReader.wordUnderCursor()
-            console.log("handlePanelOpened: atspi='", picked, "'")
-        }
-
-        // 3. If we have text, paste into input and translate
+        // 2. If we have text, paste into input and translate
         if (picked && picked.trim().length > 0) {
             console.log("handlePanelOpened: pasting '", picked, "'")
             p_inputField.text = picked.trim()
