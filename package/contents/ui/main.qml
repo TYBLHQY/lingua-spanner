@@ -7,6 +7,9 @@ import org.kde.plasma.components as PlasmaComponents3
 import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
 
+// ── C++ system helper (xclip via QProcess) ────────────────
+import LinguaSpannerHelper
+
 // ── Translation services ───────────────────────────────────
 import "services" as Services
 
@@ -28,8 +31,11 @@ PlasmoidItem {
     property bool translating: false
     property string errorMessage: ""
 
-    // ── Text paste buffer (for shortcut 2) ──────────────────
+    // ── Text picked from focused window (for paste-on-open) ─
     property string pendingPickText: ""
+
+    // ── PasteSelectionHelper (QProcess xclip wrapper) ───────
+    PasteSelectionHelper { id: pasteSelectionHelper }
 
     // ── Translation handler ─────────────────────────────────
     function translate(text) {
@@ -53,9 +59,6 @@ PlasmoidItem {
                 deepseekService.translate(inputText, deepseekApiKey, deepseekModel)
             }
         }
-        if (mode === "youdao") {
-            // youdaoService.onFinished 会设置 translating = false
-        }
     }
 
     function checkDone() {
@@ -67,7 +70,19 @@ PlasmoidItem {
         }
     }
 
-    // ── Services ────────────────────────────────────────────
+    // ── Pick text from focused window when panel opens ────
+    onExpandedChanged: {
+        if (!root.expanded) return
+        var picked = pasteSelectionHelper.readSelection()
+        if (!picked || picked.trim().length === 0) {
+            picked = pasteSelectionHelper.readClipboard()
+        }
+        if (picked && picked.trim().length > 0) {
+            root.pendingPickText = picked.trim()
+        }
+    }
+
+    // ── Translation services ───────────────────────────────
     Services.YoudaoWebNewService {
         id: youdaoService
         onFinished: function(result) {
@@ -92,33 +107,6 @@ PlasmoidItem {
         }
     }
 
-    PasteSelectionHelper {
-        id: pasteSelectionHelper
-    }
-
-    // ── Pick text from focused window (shortcut 2) ─────────
-    function pickAndTranslate() {
-        // Try primary selection first, fallback to clipboard
-        var text = pasteSelectionHelper.readSelection()
-        if (!text || text.trim().length === 0) {
-            text = pasteSelectionHelper.readClipboard()
-        }
-        if (text && text.trim().length > 0) {
-            pendingPickText = text.trim()
-        }
-        Plasmoid.activated()
-    }
-
-    onExpandedChanged: {
-        // Delegate to fullRepresentation — it handles inputField interactions
-        if (root.expanded) {
-            root._panelJustOpened = true
-        }
-    }
-
-    // Flag: fullRepresentation should check pendingPickText on next show
-    property bool _panelJustOpened: false
-
     // ── Compact: taskbar icon ───────────────────────────────
     compactRepresentation: Kirigami.Icon {
         source: "accessories-dictionary"
@@ -138,10 +126,9 @@ PlasmoidItem {
         Layout.preferredWidth: 440
         Layout.preferredHeight: 480
 
-        // Handle panel-open actions (shortcut 1 focus / shortcut 2 paste)
+        // Handle panel-open: paste picked text or focus input
         onVisibleChanged: {
             if (!visible) return
-            root._panelJustOpened = false
             if (root.pendingPickText.length > 0) {
                 inputField.text = root.pendingPickText
                 inputField.selectAll()
@@ -337,6 +324,6 @@ PlasmoidItem {
     toolTipMainText: i18n("Lingua Spanner — Translate")
     toolTipSubText: {
         if (inputText.length > 0) return i18n("Last: %1", inputText)
-        return i18n("Press %1 to open", Plasmoid.configuration.shortcutOpen || "Meta+1")
+        return i18n("Click or press shortcut to open")
     }
 }

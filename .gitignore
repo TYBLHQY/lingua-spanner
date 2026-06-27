@@ -23,3 +23,5 @@ Thumbs.db
 
 # Temporary
 /tmp/
+build/
+CMakeFiles/
