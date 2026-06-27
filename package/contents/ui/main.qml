@@ -7,8 +7,8 @@ import org.kde.plasma.components as PlasmaComponents3
 import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
 
-// ── C++ system helper (xclip via QProcess) ────────────────
-import LinguaSpannerHelper
+// ── Custom QML plugin (xclip via QProcess) ───────────────
+import "../lib/LinguaSpannerHelper"
 
 // ── Translation services ───────────────────────────────────
 import "services" as Services

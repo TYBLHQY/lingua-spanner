@@ -4,7 +4,7 @@
 // QProcess to run xclip synchronously.
 
 import QtQuick
-import LinguaSpannerHelper
+import "../lib/LinguaSpannerHelper"
 
 QtObject {
     id: root
