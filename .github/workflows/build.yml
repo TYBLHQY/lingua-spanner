@@ -29,7 +29,6 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: '6.7.*'
-          modules: 'qtbase qtdeclarative'
           cache: true
 
       - name: Extract version from metadata.json
