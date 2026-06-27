@@ -66,15 +66,21 @@ kpackagetool6 -t Plasma/Applet -u package/
 # Remove
 kpackagetool6 -t Plasma/Applet -r org.kde.lingua-spanner
 
-# Test in isolation
+# Test in isolation (no plasma restart needed)
 plasmoidviewer -a package/
 
-# Test just popup
+# Test just popup (no plasma restart needed)
 plasmawindowed org.kde.lingua-spanner
 
-# Clear QML cache after edits
-rm -rf ~/.cache/libqmlcache/
-systemctl --user restart plasma-plasmashell
+# ── Full refresh cycle (for panel/widget testing) ──────────
+# After kpackagetool6 -u, run BOTH:
+rm -rf ~/.cache/libqmlcache/              # 1. clear QML compiled cache
+systemctl --user restart plasma-plasmashell  # 2. restart Plasma shell to pick up new files
+
+# NOTE: The restart is REQUIRED after updating if you want to test the widget
+#       live on the panel/desktop. `plasmashell` caches the entire KPackage
+#       at load time; `kpackagetool6 -u` updates the files on disk but does
+#       NOT trigger a reload of the running instance.
 
 # Config UI development
 systemsettings kcm_plasmoid_config ./package/
