@@ -36,7 +36,6 @@ KCMUtils.SimpleKCM {
             }
         }
     }
-    onCfg_deepseekApiKeyChanged: console.log("dsApiKey changed")
 
     // ── UI ────────────────────────────────────────────────────
     ColumnLayout {

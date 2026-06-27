@@ -90,11 +90,7 @@ PlasmoidItem {
 
         if (fromShortcut) {
             var picked = pasteSelectionHelper.readSelection()
-            console.log("handlePanelOpened: primary='", picked, "'")
-            if (!picked || picked.trim().length === 0) {
-                picked = pasteSelectionHelper.readClipboard()
-                console.log("handlePanelOpened: clipboard='", picked, "'")
-            }
+            console.log("handlePanelOpened: selection='", picked, "'")
 
             // If we have text, paste into input and translate
             if (picked && picked.trim().length > 0) {
@@ -102,6 +98,9 @@ PlasmoidItem {
                 p_inputField.text = picked.trim()
                 p_inputField.selectAll()
                 root.translate(p_inputField.text)
+                // Clear PRIMARY so next press without new selection
+                // doesn't re-paste stale content.
+                pasteSelectionHelper.clearSelection()
                 return
             }
         }

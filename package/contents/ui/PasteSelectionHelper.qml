@@ -1,5 +1,5 @@
 // ── Paste Selection Helper ──────────────────────────────────
-// Reads text from the system's primary selection or clipboard.
+// Reads PRIMARY selection text from the focused window.
 // Uses the C++ ProcessHelper (LinguaSpannerHelper) which wraps
 // QProcess to run xclip synchronously.
 
@@ -9,9 +9,6 @@ import "../lib/LinguaSpannerHelper"
 QtObject {
     id: root
 
-    // C++ helper — runs xclip via QProcess
-    // (ProcessHelper is not a singleton, QML_ELEMENT creates
-    //  an instance for us)
     property ProcessHelper proc: ProcessHelper {}
 
     /// Read from PRIMARY selection (X11 middle-click / Wayland highlight)
@@ -19,8 +16,9 @@ QtObject {
         return proc.readProcessOutput("xclip", ["-o", "-selection", "primary"])
     }
 
-    /// Read from CLIPBOARD (Ctrl+C buffer)
-    function readClipboard() {
-        return proc.readProcessOutput("xclip", ["-o", "-selection", "clipboard"])
+    /// Clear PRIMARY selection — prevents stale content
+    /// from being re-pasted on the next shortcut press.
+    function clearSelection() {
+        proc.readProcessOutput("xclip", ["-i", "/dev/null", "-selection", "primary"])
     }
 }
