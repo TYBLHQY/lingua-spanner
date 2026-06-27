@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# ── Lingua Spanner dev helper ──────────────────────────────
+# Usage: ./dev [build|install|test|restart|qml|full|status]
+#   (default: status)
+
+set -euo pipefail
+PROJ="$(cd "$(dirname "$0")" && pwd)"
+CMD="${1:-status}"
+
+case "$CMD" in
+  build)    make -C "$PROJ" build ;;
+  install)  make -C "$PROJ" install ;;
+  test)     make -C "$PROJ" test ;;
+  restart)  make -C "$PROJ" restart ;;
+  qml)      make -C "$PROJ" qml ;;
+  full)     make -C "$PROJ" full ;;
+  status)   make -C "$PROJ" status ;;
+  *)
+    echo "用法: ./dev <command>"
+    echo ""
+    echo "命令:"
+    echo "  build    编译 C++ → 拷贝 .so 到包装"
+    echo "  install  更新 Plasma 包 + 清缓存"
+    echo "  test     plasmawindowed 预览"
+    echo "  restart  重启 plasmashell (面板更新)"
+    echo "  qml      只更新 QML + 重启 (快速)"
+    echo "  full     build → install → restart (完整部署)"
+    echo "  status   查看当前状态"
+    ;;
+esac
