@@ -13,6 +13,23 @@ Module {
         prototype: "QObject"
         exports: ["LinguaSpannerHelper/ProcessHelper 1.0"]
         exportMetaObjectRevisions: [256]
+        Property {
+            name: "selectionTimestamp"
+            type: "qlonglong"
+            read: "selectionTimestamp"
+            notify: "selectionTimestampChanged"
+            index: 0
+            isReadonly: true
+        }
+        Signal {
+            name: "selectionReady"
+            Parameter { name: "text"; type: "QString" }
+        }
+        Signal {
+            name: "selectionError"
+            Parameter { name: "error"; type: "QString" }
+        }
+        Signal { name: "selectionTimestampChanged" }
         Method {
             name: "readProcessOutput"
             type: "QString"
@@ -27,5 +44,10 @@ Module {
             Parameter { name: "program"; type: "QString" }
             Parameter { name: "args"; type: "QStringList" }
         }
+        Method {
+            name: "readSelectionAsync"
+            Parameter { name: "timeoutMs"; type: "int" }
+        }
+        Method { name: "readSelectionAsync"; isCloned: true }
     }
 }

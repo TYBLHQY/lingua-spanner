@@ -2,6 +2,8 @@
 // Reads PRIMARY selection text from the focused window.
 // Uses the C++ ProcessHelper (LinguaSpannerHelper) which wraps
 // QProcess to run xclip synchronously.
+// Selection freshness is determined by ProcessHelper.selectionTimestamp
+// (updated via QClipboard when PRIMARY owner changes).
 
 import QtQuick
 import "../lib/LinguaSpannerHelper"
@@ -20,11 +22,5 @@ QtObject {
     /// Results arrive via ProcessHelper.selectionReady / selectionError signals.
     function readSelectionAsync() {
         proc.readSelectionAsync()
-    }
-
-    /// Clear PRIMARY selection — prevents stale content
-    /// from being re-pasted on the next shortcut press.
-    function clearSelection() {
-        proc.readProcessOutput("xclip", ["-i", "/dev/null", "-selection", "primary"])
     }
 }

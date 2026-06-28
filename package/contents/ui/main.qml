@@ -240,8 +240,14 @@ PlasmoidItem {
 
     /// Handles async selection result
     function handlePickedSelection(text) {
-        if (!text || text.trim().length === 0) {
-            console.log("selection ready", Date.now() - root._tPanelOpen, "ms, empty — focusing input")
+        // Freshness check: only accept PRIMARY content if the selection
+        // owner changed within the last 1 second. Older content is stale
+        // (user selected text 20s ago but hasn't selected anything new).
+        var elapsed = Date.now() - pasteSelectionHelper.proc.selectionTimestamp
+        var isFresh = elapsed <= 1000
+
+        if (!text || text.trim().length === 0 || !isFresh) {
+            console.log("selection ready, fresh=", isFresh, "elapsed=", elapsed, "ms — focusing input")
             if (p_inputField) {
                 p_inputField.forceActiveFocus()
                 if (p_inputField.text.trim().length > 0) {
@@ -251,13 +257,10 @@ PlasmoidItem {
             return
         }
 
-        console.log("selection ready", Date.now() - root._tPanelOpen, "ms, text='", text, "'")
+        console.log("selection ready, fresh, elapsed=", elapsed, "ms, text='", text, "'")
         p_inputField.text = text.trim()
         p_inputField.selectAll()
         root.translate(p_inputField.text)
-        // Clear PRIMARY so next press without new selection
-        // doesn't re-paste stale content.
-        pasteSelectionHelper.clearSelection()
     }
 
     // ── Translation services ───────────────────────────────

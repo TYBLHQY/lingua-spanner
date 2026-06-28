@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" CACHE PATH "Install prefix")
 
 # ── Qt6 QML module (ProcessHelper — no KF6 needed) ─────────
-find_package(Qt6 6.7 REQUIRED COMPONENTS Core Qml)
+find_package(Qt6 6.7 REQUIRED COMPONENTS Core Qml Gui)
 
 qt_policy(SET QTP0001 NEW)
 
@@ -24,6 +24,8 @@ set_target_properties(lingua_spanner_helperplugin PROPERTIES
     INSTALL_RPATH "$ORIGIN"
     BUILD_RPATH "$ORIGIN"
 )
+
+target_link_libraries(lingua_spanner_helper PRIVATE Qt6::Gui)
 
 target_include_directories(lingua_spanner_helper PRIVATE
     ${CMAKE_SOURCE_DIR}/src
