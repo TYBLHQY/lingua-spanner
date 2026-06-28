@@ -14,7 +14,7 @@ KCMUtils.SimpleKCM {
     property string cfg_translateModeDefault: "youdao"
     property alias cfg_deepseekApiKey: apiKeyField.text
     property string cfg_deepseekApiKeyDefault: ""
-    property alias cfg_deepseekModel: modelCombo.currentValue
+    property string cfg_deepseekModel: "deepseek-v4-flash"
     property string cfg_deepseekModelDefault: "deepseek-v4-flash"
     property alias cfg_deepseekSystemPrompt: promptField.text
     property string cfg_deepseekSystemPromptDefault: "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
@@ -68,26 +68,75 @@ KCMUtils.SimpleKCM {
             PlasmaComponents3.Label {
                 text: i18n("Model:")
             }
-            QQC2.ComboBox {
-                id: modelCombo
+            RowLayout {
                 Layout.fillWidth: true
-                model: [
-                    { text: "DeepSeek-V4-Flash", value: "deepseek-v4-flash" },
-                    { text: "DeepSeek-V4-Pro", value: "deepseek-v4-pro" }
-                ]
-                textRole: "text"
-                valueRole: "value"
+                spacing: Kirigami.Units.smallSpacing
 
-                property bool _ready: false
-                Component.onCompleted: {
-                    var cfg = page.cfg_deepseekModel
-                    for (var i = 0; i < model.length; i++) {
-                        if (model[i].value === cfg) {
-                            currentIndex = i
-                            break
+                QQC2.ComboBox {
+                    id: modelCombo
+                    editable: true
+                    Layout.fillWidth: true
+                    model: ["deepseek-v4-flash", "deepseek-v4-pro"]
+
+                    Component.onCompleted: editText = page.cfg_deepseekModel
+                    onEditTextChanged: page.cfg_deepseekModel = editText
+                }
+
+                QQC2.Button {
+                    id: dsRefreshBtn
+                    icon.name: "view-refresh"
+                    implicitWidth: Kirigami.Units.iconSizes.medium
+                    implicitHeight: Kirigami.Units.iconSizes.medium
+                    enabled: !dsRefreshBtn.busy
+
+                    property bool busy: false
+                    Accessible.name: i18n("Refresh model list")
+
+                    onClicked: {
+                        var key = apiKeyField.text.trim()
+                        if (!key) return
+
+                        dsRefreshBtn.busy = true
+                        dsRefreshBtn.enabled = false
+
+                        var xhr = new XMLHttpRequest()
+                        xhr.open("GET", "https://api.deepseek.com/models")
+                        xhr.setRequestHeader("Authorization", "Bearer " + key)
+                        xhr.setRequestHeader("Accept", "application/json")
+
+                        xhr.onreadystatechange = function() {
+                            if (xhr.readyState !== XMLHttpRequest.DONE) return
+                            dsRefreshBtn.busy = false
+                            dsRefreshBtn.enabled = true
+
+                            if (xhr.status !== 200) {
+                                console.log("DeepSeek models fetch failed:", xhr.status)
+                                return
+                            }
+
+                            try {
+                                var resp = JSON.parse(xhr.responseText)
+                                if (resp.data) {
+                                    var models = resp.data
+                                        .filter(function(m) { return m.id })
+                                        .map(function(m) { return m.id })
+                                        .sort()
+                                    if (models.length > 0)
+                                        modelCombo.model = models
+                                }
+                            } catch (e) {
+                                console.log("Failed to parse DeepSeek models:", e.message)
+                            }
                         }
+
+                        xhr.onerror = function() {
+                            dsRefreshBtn.busy = false
+                            dsRefreshBtn.enabled = true
+                            console.log("Network error fetching DeepSeek models")
+                        }
+
+                        xhr.send()
                     }
-                    _ready = true
                 }
             }
 
