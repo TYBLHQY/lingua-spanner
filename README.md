@@ -9,7 +9,7 @@
 - **四引擎翻译**: DeepSeek API + SiliconFlow API（AI 翻译）+ 有道词典（释义/例句/发音）+ Free Dictionary API（英语定义）
 - **流式输出**: DeepSeek / SiliconFlow 支持 SSE 流式逐字输出
 - **一键取词**: Plasma 全局快捷键 — 自动读取选中文本、粘贴并翻译
-- **智能选区新鲜度**: 通过 `QClipboard::selectionChanged()` 检测选区新鲜度，仅采纳 1 秒内的主动选中
+- **智能选区新鲜度**: 通过 `QClipboard::selectionChanged()` 检测选区新鲜度，仅采纳 3 秒内的主动选中
 - **翻译历史**: AI 翻译自动缓存历史记录（内存，上限 20 条，可删除）
 - **配置灵活**: API Key、模型选择、Temperature/Top-P/MaxTokens、自定义 System Prompt、字体大小均可配置
 - **引擎排序**: 配置页支持启用/禁用和拖拽排序各翻译引擎
