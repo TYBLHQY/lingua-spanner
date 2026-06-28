@@ -27,6 +27,7 @@ PlasmoidItem {
     readonly property int deepseekMaxTokens: Plasmoid.configuration.deepseekMaxTokens || 4096
     readonly property double deepseekTopP: Plasmoid.configuration.deepseekTopP !== undefined ? Plasmoid.configuration.deepseekTopP : 1.0
     readonly property string deepseekSystemPrompt: Plasmoid.configuration.deepseekSystemPrompt || ""
+    readonly property bool deepseekStream: Plasmoid.configuration.deepseekStream !== undefined ? Plasmoid.configuration.deepseekStream : true
 
     // ── Translation state ───────────────────────────────────
     property string inputText: ""
@@ -35,6 +36,10 @@ PlasmoidItem {
     property var dictionaryResult: null
     property bool translating: false
     property string errorMessage: ""
+
+    // ── DeepSeek streaming display ──────────────────────────
+    property string streamingTranslation: ""
+    property string streamingInput: ""
 
     // ── DeepSeek history (in-memory) ────────────────────────
     property var dsHistory: []
@@ -92,6 +97,10 @@ PlasmoidItem {
         deepseekResult = null
         dictionaryResult = null
 
+        // Reset streaming state for new translation
+        streamingTranslation = ""
+        streamingInput = ""
+
         var mode = translateMode
 
         if (mode === "youdao") {
@@ -109,7 +118,8 @@ PlasmoidItem {
                 errorMessage = i18n("DeepSeek API key not configured")
                 translating = false
             } else {
-                deepseekService.translate(inputText, deepseekApiKey, deepseekModel, deepseekSystemPrompt, deepseekTemperature, deepseekMaxTokens, deepseekTopP)
+                streamingInput = inputText
+                deepseekService.translate(inputText, deepseekApiKey, deepseekModel, deepseekSystemPrompt, deepseekTemperature, deepseekMaxTokens, deepseekTopP, deepseekStream)
             }
         }
     }
@@ -226,14 +236,21 @@ PlasmoidItem {
 
     Services.DeepSeekService {
         id: deepseekService
+        onStreamingUpdate: function(text) {
+            root.streamingTranslation = text
+        }
         onFinished: function(result) {
             translating = false
+            streamingTranslation = ""
+            streamingInput = ""
             if (result.translation) {
                 root.addHistory(inputText, result.translation)
             }
         }
         onError: function(msg) {
             translating = false
+            streamingTranslation = ""
+            streamingInput = ""
             root.errorMessage = msg
         }
     }
@@ -767,6 +784,86 @@ PlasmoidItem {
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    // ── DeepSeek streaming result ─────────────────
+                    Rectangle {
+                        visible: root.translateMode === "deepseek" && root.streamingInput !== ""
+                        Layout.fillWidth: true
+                        radius: Kirigami.Units.smallSpacing
+                        color: Kirigami.Theme.backgroundColor
+                        border.color: Kirigami.Theme.highlightColor
+                        border.width: 1
+                        implicitHeight: streamCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+
+                        ColumnLayout {
+                            id: streamCol
+                            anchors {
+                                fill: parent
+                                margins: Kirigami.Units.smallSpacing
+                            }
+                            spacing: Kirigami.Units.smallSpacing
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Kirigami.Units.smallSpacing
+
+                                PlasmaComponents3.Label {
+                                    text: i18n("STREAMING")
+                                    font.bold: true
+                                    font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
+                                    color: Kirigami.Theme.neutralTextColor
+                                }
+
+                                Item { Layout.fillWidth: true }
+
+                                // ── 流式动画圆点 ──
+                                Row {
+                                    spacing: 3
+                                    Repeater {
+                                        model: 3
+                                        delegate: Rectangle {
+                                            width: 5; height: 5
+                                            radius: 2.5
+                                            color: Kirigami.Theme.highlightColor
+                                            opacity: 0.3
+                                            SequentialAnimation on opacity {
+                                                loops: Animation.Infinite
+                                                running: root.translating && root.streamingInput !== ""
+
+                                                PauseAnimation { duration: 200 * index }
+
+                                                NumberAnimation {
+                                                    from: 0.3; to: 1.0
+                                                    duration: 400
+                                                    easing.type: Easing.InOutQuad
+                                                }
+                                                NumberAnimation {
+                                                    from: 1.0; to: 0.3
+                                                    duration: 400
+                                                    easing.type: Easing.InOutQuad
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            PlasmaComponents3.Label {
+                                text: root.streamingInput
+                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                color: Kirigami.Theme.neutralTextColor
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                            }
+
+                            PlasmaComponents3.Label {
+                                text: root.streamingTranslation !== "" ? root.streamingTranslation : i18n("Waiting for response…")
+                                font.pointSize: Kirigami.Theme.defaultFont.pointSize
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
                             }
                         }
                     }

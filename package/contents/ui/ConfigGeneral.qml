@@ -24,6 +24,8 @@ KCMUtils.SimpleKCM {
     property int cfg_deepseekMaxTokensDefault: 4096
     property double cfg_deepseekTopP: 1.0
     property double cfg_deepseekTopPDefault: 1.0
+    property alias cfg_deepseekStream: streamCheck.checked
+    property bool cfg_deepseekStreamDefault: true
     property string cfg_shortcutOpen: "Meta+1"
     property string cfg_shortcutOpenDefault: "Meta+1"
     property string cfg_shortcutPick: "Meta+2"
@@ -179,6 +181,14 @@ KCMUtils.SimpleKCM {
                 Layout.fillWidth: true
                 Layout.maximumWidth: Kirigami.Units.gridUnit * 10
                 editable: true
+            }
+
+            QQC2.CheckBox {
+                id: streamCheck
+                text: i18n("Stream output")
+                Layout.columnSpan: 2
+                Layout.fillWidth: true
+                Layout.topMargin: Kirigami.Units.smallSpacing
             }
         }
 
