@@ -527,8 +527,6 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         radius: Kirigami.Units.smallSpacing
                         color: Kirigami.Theme.backgroundColor
-                        border.color: Kirigami.Theme.disabledTextColor
-                        border.width: 1
                         implicitHeight: youdaoCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
                         ColumnLayout {
@@ -603,19 +601,11 @@ PlasmoidItem {
                                 Repeater {
                                     model: youdaoResult ? youdaoResult.examType : []
 
-                                    delegate: Rectangle {
+                                    delegate: PlasmaComponents3.Label {
                                         required property string modelData
-                                        color: Kirigami.Theme.highlightColor
-                                        radius: Kirigami.Units.smallSpacing
-                                        implicitHeight: examLabel.implicitHeight + Kirigami.Units.smallSpacing
-                                        implicitWidth: examLabel.implicitWidth + Kirigami.Units.smallSpacing + 10
-
-                                        PlasmaComponents3.Label {
-                                            id: examLabel
-                                            anchors.centerIn: parent
-                                            text: modelData
-                                            font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
-                                        }
+                                        text: modelData
+                                        color: Kirigami.Theme.linkColor
+                                        font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
                                     }
                                 }
                             }
@@ -703,8 +693,6 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         radius: Kirigami.Units.smallSpacing
                         color: Kirigami.Theme.backgroundColor
-                        border.color: Kirigami.Theme.disabledTextColor
-                        border.width: 1
                         implicitHeight: dictCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
                         ColumnLayout {
@@ -855,8 +843,6 @@ PlasmoidItem {
                         Layout.fillWidth: true
                         radius: Kirigami.Units.smallSpacing
                         color: Kirigami.Theme.backgroundColor
-                        border.color: Kirigami.Theme.highlightColor
-                        border.width: 1
                         implicitHeight: streamCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
                         ColumnLayout {
