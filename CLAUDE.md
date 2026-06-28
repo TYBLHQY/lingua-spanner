@@ -1,8 +1,10 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 ## Project Overview
 
-**Lingua Spanner** — a KDE Plasma 6 plasmoid (applet) for translation. Supports dual-engine: Youdao web dictionary and DeepSeek AI API translation. Provides a single global shortcut: open panel → read selection if available → paste and translate, otherwise just focus input.
+**Lingua Spanner** — a KDE Plasma 6 plasmoid (applet) for translation. Supports 4 translation backends: Youdao web dictionary (scraping), DeepSeek API, SiliconFlow API (OpenAI-compatible), and Free Dictionary API. All HTTP via `XMLHttpRequest`.
 
 - **Type:** Plasma/Applet (KPackageStructure)
 - **Target:** Plasma 6.0+
@@ -18,103 +20,78 @@ lingua-spanner/
 ├── Makefile                # Dev workflow: build, install, test, restart
 ├── dev                     # Convenience script: ./dev build|full|qml|restart
 ├── docs/
-│   ├── feasibility-report.md  # Original feasibility report (archived)
-│   └── requirements.md        # Project requirements document
-├── package/                   # KPackage root (primary deployment unit)
-│   ├── metadata.json          # Plugin metadata (name, version, category, ID)
+│   ├── feasibility-report.md
+│   ├── requirements.md
+│   └── youdao-web-html-parsing-rules.md
+├── package/
+│   ├── metadata.json          # Plugin ID, version, category
 │   ├── contents/
 │   │   ├── config/
-│   │   │   ├── main.xml       # KConfig XT schema (translateMode, apiKey, etc.)
-│   │   │   └── config.qml     # Config UI shell (points to ConfigGeneral.qml)
-│   │   ├── lib/
-│   │   │   └── LinguaSpannerHelper/  # C++ QML module (.so + qmldir)
+│   │   │   ├── main.xml       # KConfig XT schema (all 4 engines, shortcuts, fonts)
+│   │   │   └── config.qml     # Shell that loads ConfigGeneral.qml
+│   │   ├── lib/LinguaSpannerHelper/  # C++ QML module (.so + qmldir)
 │   │   └── ui/
-│   │       ├── main.qml            # Main applet: PlasmoidItem, translate UI
-│   │       ├── ConfigGeneral.qml   # Settings form: engine selection, API key
-│   │       ├── PasteSelectionHelper.qml  # Text picker wrapping ProcessHelper
+│   │       ├── main.qml              # PlasmoidItem: UI, orchestration, shortcuts
+│   │       ├── ConfigGeneral.qml     # Settings form
+│   │       ├── PasteSelectionHelper.qml  # Wraps ProcessHelper for xclip
 │   │       └── services/
-│   │           ├── DeepSeekService.qml          # DeepSeek API translation
-│   │           ├── FreeDictionaryApiService.qml # Free Dictionary API (no key needed)
-│   │           └── YoudaoWebNewService.qml      # Youdao web dictionary
-│   └── translate/               # Translation files
+│   │           ├── DeepSeekService.qml
+│   │           ├── SiliconFlowService.qml
+│   │           ├── FreeDictionaryApiService.qml
+│   │           └── YoudaoWebNewService.qml
 ├── src/
-│   └── ProcessHelper.h/.cpp     # C++ QML plugin — QProcess xclip wrapper
+│   └── ProcessHelper.h/.cpp     # QML module: xclip wrapper + QClipboard listener
 ├── tests/
-│   ├── diagnostic.qml           # Interactive diagnostic UI
-│   └── tst_ProcessHelper.qml    # ProcessHelper unit test
-├── docs/
-│   ├── feasibility-report.md           # Original feasibility report (archived)
-│   ├── requirements.md                 # Project requirements document
-│   └── youdao-web-html-parsing-rules.md # Youdao HTML parsing reference
-└── .gitignore                  # .claude/ ignored, CLAUDE.md tracked
+│   ├── diagnostic.qml           # Interactive diagnostic UI (qml6 -I ...)
+│   └── tst_ProcessHelper.qml    # QTest unit tests for ProcessHelper
+└── .gitignore
 ```
 
 ## Architecture
 
 ### Pure QML Plasmoid (primary)
 
-The translation app is a pure-QML plasmoid with a small C++ helper module for xclip access. All HTTP calls use `XMLHttpRequest`.
+All translation logic is pure QML. A small C++ helper module (`ProcessHelper`) provides xclip access and PRIMARY selection timestamp tracking via `QClipboard`.
 
-| File | Role |
-|------|------|
-| `package/contents/ui/main.qml` | Plasmoid entry: UI, shortcuts, orchestration |
-| `services/DeepSeekService.qml` | Calls `api.deepseek.com/chat/completions` → returns AI translation |
-| `services/YoudaoWebNewService.qml` | Queries `dict.youdao.com` → parses HTML → returns exp/audio/forms |
-| `services/FreeDictionaryApiService.qml` | Queries `api.dictionaryapi.dev` → returns English definitions (no key) |
-| `PasteSelectionHelper.qml` | Reads primary selection / clipboard via ProcessHelper C++ |
+| Service | API | Backend |
+|---------|-----|---------|
+| `DeepSeekService.qml` | `POST api.deepseek.com/chat/completions` | AI translation |
+| `SiliconFlowService.qml` | `POST api.siliconflow.cn/v1/chat/completions` | AI translation (OpenAI-compatible) |
+| `YoudaoWebNewService.qml` | `GET dict.youdao.com/result?word=X&lang=en` | Dictionary scraping, regex HTML parse |
+| `FreeDictionaryApiService.qml` | `GET api.dictionaryapi.dev/api/v2/entries/en/X` | English definitions (no key) |
 
-### Activation behavior
+### Activation
 
-Single shortcut/click → `handlePanelOpened()`:
-1. **Keyboard shortcut**: reads PRIMARY selection → if found, paste + translate; else focus input (keeping previous content)
-2. **Click/tap icon**: toggle panel, focus input — never reads selection
+Shortcut/click → `handlePanelOpened()`:
+1. **Keyboard shortcut**: reads PRIMARY selection asynchronously → freshness check (must be within 1s of last `QClipboard::changed(Selection)` signal) → paste + translate; otherwise focus input.
+2. **Click**: toggle panel, focus input only — never reads selection.
 
-### Development Workflow
+### Config pipeline
+
+`main.xml` (KConfig XT) → `config.qml` (shell) → `ConfigGeneral.qml` (actual widget). Config keys like `modeOrder`, `modeEnabled`, `fontSizeBase` are JSON strings parsed in QML. AI model lists (`deepseekModelList`, `siliconFlowModelList`) are cached JSON from model-list API fetches.
+
+### Selection freshness (`ProcessHelper`)
+
+`ProcessHelper` constructor connects `QGuiApplication::clipboard()->changed(QClipboard::Selection)` and records `m_selectionTimestamp`. When xclip async read completes, `main.qml` checks `elapsed <= 1000` — stale selections (>1s since last change) are silently ignored, replacing the old `clearSelection()` approach.
+
+## Development
 
 ```sh
-# Quick — next best thing
-./dev qml       # = kpackagetool6 -u + restart (QML-only changes)
-./dev build     # = cmake --build + stage .so to package (C++ changes)
-./dev full      # = build + install + restart (full deploy)
+# Info
+make status          # git log, plasmoid install status, module file info
+make configure       # cmake configure (first time after clone)
 
-# Manual step-by-step
-kpackagetool6 -t Plasma/Applet -i package/     # Install
-kpackagetool6 -t Plasma/Applet -u package/     # Update
-kpackagetool6 -t Plasma/Applet -r org.kde.lingua-spanner  # Remove
+# Iterate
+make build           # cmake --build + stage .so to package (C++ changes)
+make qml             # kpackagetool6 -u + restart (QML-only changes)
+make full            # full deploy (build + install + restart)
+make test            # install + plasmawindowed preview (no shell restart)
+make restart         # kquitapp6 + plasmashell --replace
 
-# Testing
-plasmawindowed org.kde.lingua-spanner           # Popup test (no restart)
+# Tests
+qml6 -I package/contents/lib tests/tst_ProcessHelper.qml   # Unit tests
+qml6 -I package/contents/lib tests/diagnostic.qml          # Interactive diagnostics
 
-# Restart plasma shell
-./dev restart   # = kquitapp6 + plasmashell --replace
-
-# Config UI
-systemsettings kcm_plasmoid_config ./package/
-
-# Debug logs
-journalctl -f -o cat | grep -E "ProcessHelper|qml:"
+# Debug
+journalctl -f -o cat | grep -E "ProcessHelper|qml:"       # Plasmoid logs
 ```
-
-### C++ Helper Module
-
-The `LinguaSpannerHelper` QML module (in `package/contents/lib/LinguaSpannerHelper/`) wraps `QProcess` for calling `xclip` synchronously from QML.
-
-- **Source**: `src/ProcessHelper.h` / `.cpp`
-- **Build**: `cmake --build build -j$(nproc)` (Qt6 only, no KF6 needed)
-- **After rebuild**: files auto-staged by `make build` or `./dev build`
-- **Self-contained**: The module is bundled in the plasmoid package (`contents/lib/LinguaSpannerHelper/`). No system-wide install needed.
-- **QML import**: `import "../lib/LinguaSpannerHelper"` from `main.qml`
-
-### Youdao Web Dictionary
-
-Reference: `docs/youdao-web-html-parsing-rules.md` (HTML parsing details)
-
-URL: `GET https://dict.youdao.com/result?word=<word>&lang=en`
-Root container: `.modules`
-Parsing: regex-based in QML
-
-### DeepSeek API
-
-Endpoint: `POST https://api.deepseek.com/chat/completions`
-Auth: `Authorization: Bearer <apiKey>` (stored in plaintext in KConfig)
-System prompt: professional translator role with auto language detection
