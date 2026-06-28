@@ -20,7 +20,8 @@ PlasmoidItem {
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
 
     // ── Config shortcuts ────────────────────────────────────
-    readonly property string translateMode: Plasmoid.configuration.translateMode || "youdao"
+    readonly property var _modeOrder: JSON.parse(Plasmoid.configuration.modeOrder || '["youdao","deepseek","siliconflow","dictionary"]')
+    readonly property var _modeEnabled: JSON.parse(Plasmoid.configuration.modeEnabled || '["youdao","deepseek","siliconflow","dictionary"]')
     readonly property string deepseekApiKey: Plasmoid.configuration.deepseekApiKey || ""
     readonly property string deepseekModel: Plasmoid.configuration.deepseekModel || "deepseek-v4-flash"
     readonly property double deepseekTemperature: Plasmoid.configuration.deepseekTemperature !== undefined ? Plasmoid.configuration.deepseekTemperature : 1.0
@@ -31,6 +32,22 @@ PlasmoidItem {
     readonly property string siliconFlowApiKey: Plasmoid.configuration.siliconFlowApiKey || ""
     readonly property string siliconFlowModel: Plasmoid.configuration.siliconFlowModel || "deepseek-ai/DeepSeek-V4-Flash"
     readonly property bool siliconFlowStream: Plasmoid.configuration.siliconFlowStream !== undefined ? Plasmoid.configuration.siliconFlowStream : true
+
+    // ── Mode label lookup ───────────────────────────────────
+    readonly property var _modeLabels: ({
+        "youdao":      i18n("Youdao"),
+        "deepseek":    i18n("DeepSeek"),
+        "siliconflow": i18n("SiliconFlow"),
+        "dictionary":  i18n("Free Dictionary API")
+    })
+
+    // ── Currently selected mode (from ComboBox) ──────────────
+    property string currentMode: {
+        for (var i = 0; i < root._modeOrder.length; i++)
+            if (root._modeEnabled.indexOf(root._modeOrder[i]) >= 0)
+                return root._modeOrder[i]
+        return "youdao"
+    }
 
     // ── Translation state ───────────────────────────────────
     property string inputText: ""
@@ -104,26 +121,26 @@ PlasmoidItem {
         streamingTranslation = ""
         streamingInput = ""
 
-        var mode = translateMode
+        var mode = root.currentMode
 
         if (mode === "youdao") {
             youdaoService.fetch(inputText)
         } else if (mode === "dictionary") {
             dictionaryService.fetch(inputText)
         } else if (mode === "siliconflow") {
-                // siliconflow — check history cache first
-                var cached = findInHistory(inputText)
-                if (cached) {
-                    promoteHistory(cached)
-                    translating = false
-                } else if (!siliconFlowApiKey) {
-                    errorMessage = i18n("SiliconFlow API key not configured")
-                    translating = false
-                } else {
-                    streamingInput = inputText
-                    siliconFlowService.translate(inputText, siliconFlowApiKey, siliconFlowModel, "", null, 4096, null, siliconFlowStream)
-                }
+            // siliconflow — check history cache first
+            var cached = findInHistory(inputText)
+            if (cached) {
+                promoteHistory(cached)
+                translating = false
+            } else if (!siliconFlowApiKey) {
+                errorMessage = i18n("SiliconFlow API key not configured")
+                translating = false
             } else {
+                streamingInput = inputText
+                siliconFlowService.translate(inputText, siliconFlowApiKey, siliconFlowModel, "", null, 4096, null, siliconFlowStream)
+            }
+        } else {
             // deepseek — check history cache first
             var cached = findInHistory(inputText)
             if (cached) {
@@ -427,12 +444,17 @@ PlasmoidItem {
                     QQC2.ComboBox {
                         id: modeCombo
                         Layout.fillWidth: true
-                        model: [
-                            { text: i18n("Youdao (web scraping)"), value: "youdao" },
-                            { text: i18n("Free Dictionary API"), value: "dictionary" },
-                            { text: i18n("DeepSeek API"), value: "deepseek" },
-                            { text: i18n("SiliconFlow API"), value: "siliconflow" }
-                        ]
+
+                        // Build model from enabled modes
+                        model: {
+                            var order = root._modeOrder
+                            var enabled = root._modeEnabled
+                            var items = []
+                            for (var i = 0; i < order.length; i++)
+                                if (enabled.indexOf(order[i]) >= 0)
+                                    items.push({ text: root._modeLabels[order[i]] || order[i], value: order[i] })
+                            return items
+                        }
                         textRole: "text"
                         valueRole: "value"
 
@@ -442,23 +464,23 @@ PlasmoidItem {
                         // Sync from config
                         Component.onCompleted: {
                             for (var i = 0; i < model.length; i++) {
-                                if (model[i].value === root.translateMode) {
+                                if (model[i].value === root.currentMode) {
                                     currentIndex = i
                                     break
                                 }
                             }
                             _ready = true
                         }
-                        // Sync to config on user change
+                        // Sync on user change
                         onCurrentValueChanged: {
                             if (!_ready) return
-                            if (currentValue !== root.translateMode) {
+                            if (currentValue !== root.currentMode) {
                                 // Clear results
                                 youdaoResult = null
                                 deepseekResult = null
                                 dictionaryResult = null
-                                // Write to config
-                                Plasmoid.configuration.translateMode = currentValue
+                                // Write to local state
+                                root.currentMode = currentValue
                                 // Auto-translate if input is not empty
                                 Qt.callLater(function() {
                                     if (inputField.text.trim().length > 0) {
@@ -677,7 +699,7 @@ PlasmoidItem {
 
                     // ── Free Dictionary API result ────────────
                     Rectangle {
-                        visible: dictionaryResult !== null && root.translateMode === "dictionary"
+                        visible: dictionaryResult !== null && root.currentMode === "dictionary"
                         Layout.fillWidth: true
                         radius: Kirigami.Units.smallSpacing
                         color: Kirigami.Theme.backgroundColor
@@ -829,7 +851,7 @@ PlasmoidItem {
 
                     // ── DeepSeek streaming result ─────────────────
                     Rectangle {
-                        visible: (root.translateMode === "deepseek" || root.translateMode === "siliconflow") && root.streamingInput !== ""
+                        visible: (root.currentMode === "deepseek" || root.currentMode === "siliconflow") && root.streamingInput !== ""
                         Layout.fillWidth: true
                         radius: Kirigami.Units.smallSpacing
                         color: Kirigami.Theme.backgroundColor
@@ -910,7 +932,7 @@ PlasmoidItem {
                     // ── AI engine history (DeepSeek / SiliconFlow) ──
                     Repeater {
                         id: histRepeater
-                        model: (root.translateMode === "deepseek" || root.translateMode === "siliconflow") ? root.dsHistory : []
+                        model: (root.currentMode === "deepseek" || root.currentMode === "siliconflow") ? root.dsHistory : []
 
                         delegate: Rectangle {
                             required property int index

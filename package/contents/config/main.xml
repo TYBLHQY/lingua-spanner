@@ -53,5 +53,11 @@
     <entry name="history" type="String">
       <default>[]</default>
     </entry>
+    <entry name="modeOrder" type="String">
+      <default>["youdao","deepseek","siliconflow","dictionary"]</default>
+    </entry>
+    <entry name="modeEnabled" type="String">
+      <default>["youdao","deepseek","siliconflow","dictionary"]</default>
+    </entry>
   </group>
 </kcfg>
