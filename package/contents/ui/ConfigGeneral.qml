@@ -26,6 +26,12 @@ KCMUtils.SimpleKCM {
     property double cfg_deepseekTopPDefault: 1.0
     property alias cfg_deepseekStream: streamCheck.checked
     property bool cfg_deepseekStreamDefault: true
+    property alias cfg_siliconFlowApiKey: sfApiKey.text
+    property string cfg_siliconFlowApiKeyDefault: ""
+    property alias cfg_siliconFlowModel: sfModel.text
+    property string cfg_siliconFlowModelDefault: "deepseek-ai/DeepSeek-V4-Flash"
+    property alias cfg_siliconFlowStream: sfStream.checked
+    property bool cfg_siliconFlowStreamDefault: true
     property string cfg_shortcutOpen: "Meta+1"
     property string cfg_shortcutOpenDefault: "Meta+1"
     property string cfg_shortcutPick: "Meta+2"
@@ -185,6 +191,48 @@ KCMUtils.SimpleKCM {
 
             QQC2.CheckBox {
                 id: streamCheck
+                text: i18n("Stream output")
+                Layout.columnSpan: 2
+                Layout.fillWidth: true
+                Layout.topMargin: Kirigami.Units.smallSpacing
+            }
+        }
+
+        // ── SiliconFlow settings ─────────────────────────
+        Kirigami.Heading {
+            level: 3
+            text: i18n("SiliconFlow API")
+            Layout.fillWidth: true
+            Layout.topMargin: Kirigami.Units.largeSpacing
+        }
+
+        GridLayout {
+            columns: 2
+            Layout.fillWidth: true
+            rowSpacing: Kirigami.Units.smallSpacing
+            columnSpacing: Kirigami.Units.largeSpacing
+
+            PlasmaComponents3.Label {
+                text: i18n("API Key:")
+            }
+            QQC2.TextField {
+                id: sfApiKey
+                Layout.fillWidth: true
+                placeholderText: i18n("sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+                echoMode: TextInput.Password
+            }
+
+            PlasmaComponents3.Label {
+                text: i18n("Model:")
+            }
+            QQC2.TextField {
+                id: sfModel
+                Layout.fillWidth: true
+                placeholderText: "deepseek-ai/DeepSeek-V4-Flash"
+            }
+
+            QQC2.CheckBox {
+                id: sfStream
                 text: i18n("Stream output")
                 Layout.columnSpan: 2
                 Layout.fillWidth: true

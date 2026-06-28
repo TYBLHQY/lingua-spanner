@@ -28,6 +28,9 @@ PlasmoidItem {
     readonly property double deepseekTopP: Plasmoid.configuration.deepseekTopP !== undefined ? Plasmoid.configuration.deepseekTopP : 1.0
     readonly property string deepseekSystemPrompt: Plasmoid.configuration.deepseekSystemPrompt || ""
     readonly property bool deepseekStream: Plasmoid.configuration.deepseekStream !== undefined ? Plasmoid.configuration.deepseekStream : true
+    readonly property string siliconFlowApiKey: Plasmoid.configuration.siliconFlowApiKey || ""
+    readonly property string siliconFlowModel: Plasmoid.configuration.siliconFlowModel || "deepseek-ai/DeepSeek-V4-Flash"
+    readonly property bool siliconFlowStream: Plasmoid.configuration.siliconFlowStream !== undefined ? Plasmoid.configuration.siliconFlowStream : true
 
     // ── Translation state ───────────────────────────────────
     property string inputText: ""
@@ -107,7 +110,20 @@ PlasmoidItem {
             youdaoService.fetch(inputText)
         } else if (mode === "dictionary") {
             dictionaryService.fetch(inputText)
-        } else {
+        } else if (mode === "siliconflow") {
+                // siliconflow — check history cache first
+                var cached = findInHistory(inputText)
+                if (cached) {
+                    promoteHistory(cached)
+                    translating = false
+                } else if (!siliconFlowApiKey) {
+                    errorMessage = i18n("SiliconFlow API key not configured")
+                    translating = false
+                } else {
+                    streamingInput = inputText
+                    siliconFlowService.translate(inputText, siliconFlowApiKey, siliconFlowModel, "", null, 4096, null, siliconFlowStream)
+                }
+            } else {
             // deepseek — check history cache first
             var cached = findInHistory(inputText)
             if (cached) {
@@ -268,6 +284,28 @@ PlasmoidItem {
         }
     }
 
+    // ── SiliconFlow API service ──────────────────────────────
+    Services.SiliconFlowService {
+        id: siliconFlowService
+        onStreamingUpdate: function(text) {
+            root.streamingTranslation = text
+        }
+        onFinished: function(result) {
+            translating = false
+            streamingTranslation = ""
+            streamingInput = ""
+            if (result.translation) {
+                root.addHistory(inputText, result.translation)
+            }
+        }
+        onError: function(msg) {
+            translating = false
+            streamingTranslation = ""
+            streamingInput = ""
+            root.errorMessage = msg
+        }
+    }
+
     // ── Compact: taskbar icon ───────────────────────────────
     compactRepresentation: Kirigami.Icon {
         source: "translate"
@@ -392,7 +430,8 @@ PlasmoidItem {
                         model: [
                             { text: i18n("Youdao (web scraping)"), value: "youdao" },
                             { text: i18n("Free Dictionary API"), value: "dictionary" },
-                            { text: i18n("DeepSeek API"), value: "deepseek" }
+                            { text: i18n("DeepSeek API"), value: "deepseek" },
+                            { text: i18n("SiliconFlow API"), value: "siliconflow" }
                         ]
                         textRole: "text"
                         valueRole: "value"
@@ -790,7 +829,7 @@ PlasmoidItem {
 
                     // ── DeepSeek streaming result ─────────────────
                     Rectangle {
-                        visible: root.translateMode === "deepseek" && root.streamingInput !== ""
+                        visible: (root.translateMode === "deepseek" || root.translateMode === "siliconflow") && root.streamingInput !== ""
                         Layout.fillWidth: true
                         radius: Kirigami.Units.smallSpacing
                         color: Kirigami.Theme.backgroundColor
@@ -868,10 +907,10 @@ PlasmoidItem {
                         }
                     }
 
-                    // ── DeepSeek history (仅 DeepSeek 模式) ──
+                    // ── AI engine history (DeepSeek / SiliconFlow) ──
                     Repeater {
                         id: histRepeater
-                        model: root.translateMode === "deepseek" ? root.dsHistory : []
+                        model: (root.translateMode === "deepseek" || root.translateMode === "siliconflow") ? root.dsHistory : []
 
                         delegate: Rectangle {
                             required property int index

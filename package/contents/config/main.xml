@@ -29,6 +29,15 @@
     <entry name="deepseekStream" type="Bool">
       <default>true</default>
     </entry>
+    <entry name="siliconFlowApiKey" type="String">
+      <default></default>
+    </entry>
+    <entry name="siliconFlowModel" type="String">
+      <default>deepseek-ai/DeepSeek-V4-Flash</default>
+    </entry>
+    <entry name="siliconFlowStream" type="Bool">
+      <default>true</default>
+    </entry>
     <entry name="shortcutOpen" type="String">
       <default>Meta+1</default>
     </entry>
