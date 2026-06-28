@@ -28,7 +28,7 @@ KCMUtils.SimpleKCM {
     property bool cfg_deepseekStreamDefault: true
     property alias cfg_siliconFlowApiKey: sfApiKey.text
     property string cfg_siliconFlowApiKeyDefault: ""
-    property alias cfg_siliconFlowModel: sfModel.text
+    property string cfg_siliconFlowModel: "deepseek-ai/DeepSeek-V4-Flash"
     property string cfg_siliconFlowModelDefault: "deepseek-ai/DeepSeek-V4-Flash"
     property alias cfg_siliconFlowStream: sfStream.checked
     property bool cfg_siliconFlowStreamDefault: true
@@ -89,17 +89,6 @@ KCMUtils.SimpleKCM {
                     }
                     _ready = true
                 }
-            }
-
-            PlasmaComponents3.Label {
-                text: i18n("System Prompt:")
-            }
-            QQC2.TextArea {
-                id: promptField
-                Layout.fillWidth: true
-                Layout.minimumHeight: Kirigami.Units.gridUnit * 4
-                placeholderText: i18n("Enter system prompt for the AI translator…")
-                wrapMode: Text.WordWrap
             }
 
             PlasmaComponents3.Label {
@@ -201,6 +190,24 @@ KCMUtils.SimpleKCM {
 
         Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
 
+        // ── System Prompt (shared by all AI engines) ─────────
+        Kirigami.Heading {
+            level: 3
+            text: i18n("System Prompt")
+            Layout.fillWidth: true
+            Layout.topMargin: Kirigami.Units.largeSpacing
+        }
+
+        QQC2.TextArea {
+            id: promptField
+            Layout.fillWidth: true
+            Layout.minimumHeight: Kirigami.Units.gridUnit * 4
+            Layout.maximumWidth: Kirigami.Units.gridUnit * 30
+            placeholderText: i18n("Enter system prompt for the AI translator…")
+            wrapMode: Text.WordWrap
+        }
+
+        Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
         // ── SiliconFlow settings ─────────────────────────
         Kirigami.Heading {
             level: 3
@@ -228,10 +235,86 @@ KCMUtils.SimpleKCM {
             PlasmaComponents3.Label {
                 text: i18n("Model:")
             }
-            QQC2.TextField {
-                id: sfModel
+            RowLayout {
                 Layout.fillWidth: true
-                placeholderText: "deepseek-ai/DeepSeek-V4-Flash"
+                spacing: Kirigami.Units.smallSpacing
+
+                QQC2.ComboBox {
+                    id: sfModelCombo
+                    editable: true
+                    Layout.fillWidth: true
+
+                    // Preseed with default + fetched models later
+                    model: [
+                        "deepseek-ai/DeepSeek-V4-Flash",
+                        "deepseek-ai/DeepSeek-V3.2",
+                        "Pro/zai-org/GLM-5",
+                        "Pro/zai-org/GLM-4.7",
+                        "Qwen/Qwen3-8B",
+                        "Qwen/Qwen3-14B"
+                    ]
+
+                    Component.onCompleted: editText = page.cfg_siliconFlowModel
+                    onEditTextChanged: page.cfg_siliconFlowModel = editText
+                }
+
+                QQC2.Button {
+                    id: refreshBtn
+                    icon.name: "view-refresh"
+                    implicitWidth: Kirigami.Units.iconSizes.medium
+                    implicitHeight: Kirigami.Units.iconSizes.medium
+                    enabled: !refreshBtn.busy
+
+                    property bool busy: false
+
+                    Accessible.name: i18n("Refresh model list")
+
+                    onClicked: {
+                        var key = sfApiKey.text.trim()
+                        if (!key) return
+
+                        refreshBtn.busy = true
+                        refreshBtn.enabled = false
+
+                        var xhr = new XMLHttpRequest()
+                        xhr.open("GET", "https://api.siliconflow.cn/v1/models?type=text&sub_type=chat")
+                        xhr.setRequestHeader("Authorization", "Bearer " + key)
+                        xhr.setRequestHeader("Accept", "application/json")
+
+                        xhr.onreadystatechange = function() {
+                            if (xhr.readyState !== XMLHttpRequest.DONE) return
+                            refreshBtn.busy = false
+                            refreshBtn.enabled = true
+
+                            if (xhr.status !== 200) {
+                                console.log("SiliconFlow models fetch failed:", xhr.status)
+                                return
+                            }
+
+                            try {
+                                var resp = JSON.parse(xhr.responseText)
+                                if (resp.object === "list" && resp.data) {
+                                    var chatModels = resp.data
+                                        .filter(function(m) { return m.object === "model" && m.id })
+                                        .map(function(m) { return m.id })
+                                        .sort()
+                                    if (chatModels.length > 0)
+                                        sfModelCombo.model = chatModels
+                                }
+                            } catch (e) {
+                                console.log("Failed to parse models:", e.message)
+                            }
+                        }
+
+                        xhr.onerror = function() {
+                            refreshBtn.busy = false
+                            refreshBtn.enabled = true
+                            console.log("Network error fetching SiliconFlow models")
+                        }
+
+                        xhr.send()
+                    }
+                }
             }
 
             PlasmaComponents3.Label {
