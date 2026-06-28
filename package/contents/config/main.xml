@@ -59,5 +59,8 @@
     <entry name="modeEnabled" type="String">
       <default>["youdao","deepseek","siliconflow","dictionary"]</default>
     </entry>
+    <entry name="fontSizeBase" type="Int">
+      <default>14</default>
+    </entry>
   </group>
 </kcfg>

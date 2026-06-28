@@ -48,6 +48,9 @@ KCMUtils.SimpleKCM {
     property string cfg_shortcutPick: "Meta+2"
     property string cfg_shortcutPickDefault: "Meta+2"
 
+    property alias cfg_fontSizeBase: fontSizeSpin.value
+    property int cfg_fontSizeBaseDefault: 14
+
     // ── Helper: persist/restore model lists as JSON strings ──
     function parseModelList(json, fallback) {
         if (!json) return fallback
@@ -549,6 +552,35 @@ KCMUtils.SimpleKCM {
             }
         }
 
+        // ── Display settings ───────────────────────────
+        Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
+
+        Kirigami.Heading {
+            level: 3
+            text: i18n("Display")
+            Layout.fillWidth: true
+            Layout.topMargin: Kirigami.Units.smallSpacing
+        }
+
+        GridLayout {
+            columns: 2
+            Layout.fillWidth: true
+            rowSpacing: Kirigami.Units.smallSpacing
+            columnSpacing: Kirigami.Units.largeSpacing
+
+            PlasmaComponents3.Label {
+                text: i18n("Base Font Size (px):")
+            }
+            QQC2.SpinBox {
+                id: fontSizeSpin
+                from: 8
+                to: 24
+                stepSize: 1
+                editable: true
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+            }
+        }
+
         // ── Security note ────────────────────────────────────
         Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
 
@@ -558,7 +590,7 @@ KCMUtils.SimpleKCM {
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
             Layout.maximumWidth: Kirigami.Units.gridUnit * 24
-            font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+            font.pixelSize: page.cfg_fontSizeBase - 1
         }
 
         Item { Layout.fillHeight: true }

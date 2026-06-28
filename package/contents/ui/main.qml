@@ -33,6 +33,12 @@ PlasmoidItem {
     readonly property string siliconFlowModel: Plasmoid.configuration.siliconFlowModel || "deepseek-ai/DeepSeek-V4-Flash"
     readonly property bool siliconFlowStream: Plasmoid.configuration.siliconFlowStream !== undefined ? Plasmoid.configuration.siliconFlowStream : true
 
+    // ── Font sizes (from config) ────────────────────────────
+    readonly property int fontSizeBase: Plasmoid.configuration.fontSizeBase || 14
+    readonly property int fontSizeLarge: fontSizeBase + 1
+    readonly property int fontSizeSmall: Math.max(6, fontSizeBase - 2)
+    readonly property int fontSizeSecondary: Math.max(6, fontSizeBase - 1)
+
     // ── Mode label lookup ───────────────────────────────────
     readonly property var _modeLabels: ({
         "youdao":      i18n("Youdao"),
@@ -605,7 +611,7 @@ PlasmoidItem {
                                         required property string modelData
                                         text: modelData
                                         color: Kirigami.Theme.linkColor
-                                        font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
+                                        font.pixelSize: root.fontSizeSmall
                                     }
                                 }
                             }
@@ -632,7 +638,7 @@ PlasmoidItem {
                                             id: formLabel
                                             anchors.centerIn: parent
                                             text: modelData.form + " " + modelData.type
-                                            font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
+                                            font.pixelSize: root.fontSizeSmall
                                         }
                                     }
                                 }
@@ -653,8 +659,9 @@ PlasmoidItem {
                                         text: modelData.po
                                         font.bold: true
                                         color: Kirigami.Theme.neutralTextColor
-                                        font.pointSize: Kirigami.Theme.defaultFont.pointSize
+                                        font.pixelSize: root.fontSizeBase
                                     }
+
 
                                     // Translations
                                     Repeater {
@@ -678,7 +685,7 @@ PlasmoidItem {
                                                 text: formatDefinition(modelData)
                                                 textFormat: Text.StyledText
                                                 wrapMode: Text.WordWrap
-                                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                                font.pixelSize: root.fontSizeSecondary
                                             }
                                         }
                                     }
@@ -726,7 +733,7 @@ PlasmoidItem {
                                 text: dictionaryResult.phonetic
                                 font.bold: true
                                 color: Kirigami.Theme.neutralTextColor
-                                font.pointSize: Kirigami.Theme.defaultFont.pointSize + 1
+                                font.pixelSize: root.fontSizeLarge
                                 Layout.fillWidth: true
                             }
 
@@ -738,7 +745,7 @@ PlasmoidItem {
                                 font.italic: true
                                 color: Kirigami.Theme.disabledTextColor
                                 wrapMode: Text.WordWrap
-                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                font.pixelSize: root.fontSizeSecondary
                                 Layout.fillWidth: true
                             }
 
@@ -803,8 +810,9 @@ PlasmoidItem {
                                         text: modelData.po
                                         font.bold: true
                                         color: Kirigami.Theme.neutralTextColor
-                                        font.pointSize: Kirigami.Theme.defaultFont.pointSize
+                                        font.pixelSize: root.fontSizeBase
                                     }
+
 
                                     // Definitions
                                     Repeater {
@@ -828,7 +836,7 @@ PlasmoidItem {
                                                 text: formatDefinition(modelData)
                                                 textFormat: Text.StyledText
                                                 wrapMode: Text.WordWrap
-                                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                                font.pixelSize: root.fontSizeSecondary
                                             }
                                         }
                                     }
@@ -860,7 +868,7 @@ PlasmoidItem {
                                 PlasmaComponents3.Label {
                                     text: i18n("STREAMING")
                                     font.bold: true
-                                    font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
+                                    font.pixelSize: root.fontSizeSmall
                                     color: Kirigami.Theme.neutralTextColor
                                 }
 
@@ -900,7 +908,7 @@ PlasmoidItem {
 
                             PlasmaComponents3.Label {
                                 text: root.streamingInput
-                                font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                font.pixelSize: root.fontSizeSecondary
                                 color: Kirigami.Theme.neutralTextColor
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -908,7 +916,7 @@ PlasmoidItem {
 
                             PlasmaComponents3.Label {
                                 text: root.streamingTranslation !== "" ? root.streamingTranslation : i18n("Waiting for response…")
-                                font.pointSize: Kirigami.Theme.defaultFont.pointSize
+                                font.pixelSize: root.fontSizeBase
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                             }
@@ -946,7 +954,7 @@ PlasmoidItem {
                                     PlasmaComponents3.Label {
                                         text: modelData.isNew ? i18n("NEW") : i18n("HISTORY")
                                         font.bold: true
-                                        font.pointSize: Kirigami.Theme.defaultFont.pointSize - 2
+                                        font.pixelSize: root.fontSizeSmall
                                         color: modelData.isNew ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.disabledTextColor
                                     }
 
@@ -964,7 +972,7 @@ PlasmoidItem {
 
                                 PlasmaComponents3.Label {
                                     text: modelData.input
-                                    font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
+                                    font.pixelSize: root.fontSizeSecondary
                                     color: Kirigami.Theme.neutralTextColor
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -972,7 +980,7 @@ PlasmoidItem {
 
                                 PlasmaComponents3.Label {
                                     text: modelData.translation
-                                    font.pointSize: Kirigami.Theme.defaultFont.pointSize
+                                    font.pixelSize: root.fontSizeBase
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                 }
