@@ -10,13 +10,26 @@ QtObject {
     signal finished(var result)
     signal error(string message)
 
+    function preprocessWord(raw) {
+        // Strip trailing single punctuation characters that may be attached
+        // from sentence-ending text (e.g. "totality," → "totality", "philosophy." → "philosophy")
+        var s = raw.trim()
+        var trailingPunct = /[.,/?。，？;；'‘’"“”]/g
+        while (trailingPunct.test(s.slice(-1))) {
+            s = s.slice(0, -1)
+        }
+        return s
+    }
+
     function fetch(word) {
         if (!word || word.trim().length === 0) {
             error("Empty word")
             return
         }
 
-        var url = "https://dict.youdao.com/result?word=" + word + "&lang=en"
+        word = preprocessWord(word)
+
+        var url = "https://dict.youdao.com/result?word=" + encodeURIComponent(word) + "&lang=en"
 
         var xhr = new XMLHttpRequest()
         xhr.open("GET", url)
