@@ -16,6 +16,8 @@ KCMUtils.SimpleKCM {
     property string cfg_deepseekApiKeyDefault: ""
     property string cfg_deepseekModel: "deepseek-v4-flash"
     property string cfg_deepseekModelDefault: "deepseek-v4-flash"
+    property string cfg_deepseekModelList: ""
+    property string cfg_deepseekModelListDefault: ""
     property alias cfg_deepseekSystemPrompt: promptField.text
     property string cfg_deepseekSystemPromptDefault: "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
     property double cfg_deepseekTemperature: 1.0
@@ -30,12 +32,26 @@ KCMUtils.SimpleKCM {
     property string cfg_siliconFlowApiKeyDefault: ""
     property string cfg_siliconFlowModel: "deepseek-ai/DeepSeek-V4-Flash"
     property string cfg_siliconFlowModelDefault: "deepseek-ai/DeepSeek-V4-Flash"
+    property string cfg_siliconFlowModelList: ""
+    property string cfg_siliconFlowModelListDefault: ""
     property alias cfg_siliconFlowStream: sfStream.checked
     property bool cfg_siliconFlowStreamDefault: true
     property string cfg_shortcutOpen: "Meta+1"
     property string cfg_shortcutOpenDefault: "Meta+1"
     property string cfg_shortcutPick: "Meta+2"
     property string cfg_shortcutPickDefault: "Meta+2"
+
+    // ── Helper: persist/restore model lists as JSON strings ──
+    function parseModelList(json, fallback) {
+        if (!json) return fallback
+        try {
+            var arr = JSON.parse(json)
+            return Array.isArray(arr) && arr.length > 0 ? arr : fallback
+        } catch(e) { return fallback }
+    }
+    function stringifyModelList(arr) {
+        return JSON.stringify(arr)
+    }
 
     // ── UI ────────────────────────────────────────────────────
     ColumnLayout {
@@ -95,8 +111,26 @@ KCMUtils.SimpleKCM {
                     Layout.fillWidth: true
                     model: ["deepseek-v4-flash", "deepseek-v4-pro"]
 
-                    Component.onCompleted: editText = page.cfg_deepseekModel
-                    onEditTextChanged: page.cfg_deepseekModel = editText
+                    // Guard against initial editText change overwriting saved config
+                    property bool _ready: false
+
+                    Component.onCompleted: {
+                        // Restore persisted model list if available
+                        var saved = page.parseModelList(page.cfg_deepseekModelList)
+                        if (saved)
+                            model = saved
+
+                        var idx = find(page.cfg_deepseekModel)
+                        if (idx >= 0)
+                            currentIndex = idx
+                        else
+                            editText = page.cfg_deepseekModel
+                        _ready = true
+                    }
+                    onEditTextChanged: {
+                        if (_ready)
+                            page.cfg_deepseekModel = editText
+                    }
                 }
 
                 QQC2.Button {
@@ -138,8 +172,10 @@ KCMUtils.SimpleKCM {
                                         .filter(function(m) { return m.id })
                                         .map(function(m) { return m.id })
                                         .sort()
-                                    if (models.length > 0)
+                                    if (models.length > 0) {
                                         modelCombo.model = models
+                                        page.cfg_deepseekModelList = page.stringifyModelList(models)
+                                    }
                                 }
                             } catch (e) {
                                 console.log("Failed to parse DeepSeek models:", e.message)
@@ -299,8 +335,26 @@ KCMUtils.SimpleKCM {
                         "Qwen/Qwen3-14B"
                     ]
 
-                    Component.onCompleted: editText = page.cfg_siliconFlowModel
-                    onEditTextChanged: page.cfg_siliconFlowModel = editText
+                    // Guard against initial editText change overwriting saved config
+                    property bool _ready: false
+
+                    Component.onCompleted: {
+                        // Restore persisted model list if available
+                        var saved = page.parseModelList(page.cfg_siliconFlowModelList)
+                        if (saved)
+                            model = saved
+
+                        var idx = find(page.cfg_siliconFlowModel)
+                        if (idx >= 0)
+                            currentIndex = idx
+                        else
+                            editText = page.cfg_siliconFlowModel
+                        _ready = true
+                    }
+                    onEditTextChanged: {
+                        if (_ready)
+                            page.cfg_siliconFlowModel = editText
+                    }
                 }
 
                 QQC2.Button {
@@ -343,8 +397,10 @@ KCMUtils.SimpleKCM {
                                         .filter(function(m) { return m.object === "model" && m.id })
                                         .map(function(m) { return m.id })
                                         .sort()
-                                    if (chatModels.length > 0)
+                                    if (chatModels.length > 0) {
                                         sfModelCombo.model = chatModels
+                                        page.cfg_siliconFlowModelList = page.stringifyModelList(chatModels)
+                                    }
                                 }
                             } catch (e) {
                                 console.log("Failed to parse models:", e.message)

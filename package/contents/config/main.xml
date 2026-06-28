@@ -11,6 +11,9 @@
     <entry name="deepseekApiKey" type="String">
       <default></default>
     </entry>
+    <entry name="deepseekModelList" type="String">
+      <default></default>
+    </entry>
     <entry name="deepseekModel" type="String">
       <default>deepseek-v4-flash</default>
     </entry>
@@ -30,6 +33,9 @@
       <default>true</default>
     </entry>
     <entry name="siliconFlowApiKey" type="String">
+      <default></default>
+    </entry>
+    <entry name="siliconFlowModelList" type="String">
       <default></default>
     </entry>
     <entry name="siliconFlowModel" type="String">
