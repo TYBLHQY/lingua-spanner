@@ -95,3 +95,18 @@ qml6 -I package/contents/lib tests/diagnostic.qml          # Interactive diagnos
 # Debug
 journalctl -f -o cat | grep -E "ProcessHelper|qml:"       # Plasmoid logs
 ```
+
+## Commit workflow
+
+1. Verify git status is clean (`git status`)
+2. Stage only relevant files with `git add -A`
+3. Use conventional commits: `feat:`, `fix:`, `docs:`, `chore:`, `style:`, `refactor:`
+4. For feature/fix commits with significant changes, include a body with bullet points
+5. Tag format: `v<major>.<minor>.<patch>` — matched to `package/metadata.json` → `KPlugin.Version`
+
+## Update / release workflow
+
+1. Bump `package/metadata.json` → `KPlugin.Version` to the new version string
+2. Commit: `chore: bump metadata.json version to X.X.X`
+3. Tag: `git tag vX.X.X HEAD`
+4. Push with `git push --atomic origin main vX.X.X`
