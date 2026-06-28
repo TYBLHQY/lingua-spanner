@@ -16,6 +16,12 @@ QtObject {
         return proc.readProcessOutput("xclip", ["-o", "-selection", "primary"])
     }
 
+    /// Read PRIMARY selection asynchronously.
+    /// Results arrive via ProcessHelper.selectionReady / selectionError signals.
+    function readSelectionAsync() {
+        proc.readSelectionAsync()
+    }
+
     /// Clear PRIMARY selection — prevents stale content
     /// from being re-pasted on the next shortcut press.
     function clearSelection() {

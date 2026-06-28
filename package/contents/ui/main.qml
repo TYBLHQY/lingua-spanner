@@ -64,8 +64,18 @@ PlasmoidItem {
     // ── Distinguish click (just toggle) from shortcut (pick+paste)
     property bool _openedByClick: false
 
+    // ── Performance timing for async selection
+    property var _tPanelOpen: 0
+
     // ── PasteSelectionHelper (QProcess xclip wrapper) ───────
     PasteSelectionHelper { id: pasteSelectionHelper }
+
+    // ── Async selection result handler ──────────────────────
+    Connections {
+        target: pasteSelectionHelper.proc
+        function onSelectionReady(text) { root.handlePickedSelection(text) }
+        function onSelectionError(error) { console.log("selectionError:", error) }
+    }
 
     // ── Format definition text (split （notes） into dimmed) ─
     function formatDefinition(text) {
@@ -159,30 +169,46 @@ PlasmoidItem {
         var fromShortcut = !root._openedByClick
         root._openedByClick = false
 
-        if (fromShortcut) {
-            var picked = pasteSelectionHelper.readSelection()
-            console.log("handlePanelOpened: selection='", picked, "'")
+        // Performance timing
+        root._tPanelOpen = Date.now()
+        console.log("panel open", root._tPanelOpen)
 
-            // If we have text, paste into input and translate
-            if (picked && picked.trim().length > 0) {
-                console.log("handlePanelOpened: pasting '", picked, "'")
-                p_inputField.text = picked.trim()
-                p_inputField.selectAll()
-                root.translate(p_inputField.text)
-                // Clear PRIMARY so next press without new selection
-                // doesn't re-paste stale content.
-                pasteSelectionHelper.clearSelection()
-                return
-            }
+        if (fromShortcut) {
+            // Async path — panel stays interactive while xclip runs
+            pasteSelectionHelper.readSelectionAsync()
+            console.log("handlePanelOpened: fired async selection read")
+            return
         }
 
-        // 2. No selection / click path: focus input, select all if not empty
+        // 2. Click path: focus input, select all if not empty
         if (p_inputField) {
             p_inputField.forceActiveFocus()
             if (p_inputField.text.trim().length > 0) {
                 p_inputField.selectAll()
             }
         }
+    }
+
+    /// Handles async selection result
+    function handlePickedSelection(text) {
+        if (!text || text.trim().length === 0) {
+            console.log("selection ready", Date.now() - root._tPanelOpen, "ms, empty — focusing input")
+            if (p_inputField) {
+                p_inputField.forceActiveFocus()
+                if (p_inputField.text.trim().length > 0) {
+                    p_inputField.selectAll()
+                }
+            }
+            return
+        }
+
+        console.log("selection ready", Date.now() - root._tPanelOpen, "ms, text='", text, "'")
+        p_inputField.text = text.trim()
+        p_inputField.selectAll()
+        root.translate(p_inputField.text)
+        // Clear PRIMARY so next press without new selection
+        // doesn't re-paste stale content.
+        pasteSelectionHelper.clearSelection()
     }
 
     // ── Translation services ───────────────────────────────

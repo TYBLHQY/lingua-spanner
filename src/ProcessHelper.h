@@ -24,6 +24,19 @@ public:
     Q_INVOKABLE QString readProcessOutput(const QString &program,
                                           const QStringList &args,
                                           int timeoutMs = 3000);
+
+    /// Run xclip -selection primary asynchronously.
+    /// Results arrive via selectionReady / selectionError signals.
+    Q_INVOKABLE void readSelectionAsync(int timeoutMs = 3000);
+
+signals:
+    /// Emitted when xclip completes successfully.
+    void selectionReady(const QString &text);
+    /// Emitted when xclip fails or times out.
+    void selectionError(const QString &error);
+
+private:
+    QProcess *m_currentProcess = nullptr;
 };
 
 #endif // PROCESHELPER_H
