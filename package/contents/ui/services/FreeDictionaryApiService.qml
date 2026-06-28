@@ -10,11 +10,18 @@ QtObject {
     signal finished(var result)
     signal error(string message)
 
+    function preprocessWord(raw) {
+        // Strip trailing punctuation that may be attached from sentence-ending text
+        return (raw || "").trim().replace(/[.,/?。，？;；'‘’"“”《》（）]+$/, "")
+    }
+
     function fetch(word) {
         if (!word || word.trim().length === 0) {
             error("Empty word")
             return
         }
+
+        word = preprocessWord(word)
 
         var url = "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(word)
 
