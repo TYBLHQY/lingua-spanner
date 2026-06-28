@@ -189,14 +189,17 @@ KCMUtils.SimpleKCM {
                 editable: true
             }
 
+            PlasmaComponents3.Label {
+                text: i18n("Stream output:")
+            }
             QQC2.CheckBox {
                 id: streamCheck
-                text: i18n("Stream output")
-                Layout.columnSpan: 2
                 Layout.fillWidth: true
                 Layout.topMargin: Kirigami.Units.smallSpacing
             }
         }
+
+        Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
 
         // ── SiliconFlow settings ─────────────────────────
         Kirigami.Heading {
@@ -231,10 +234,11 @@ KCMUtils.SimpleKCM {
                 placeholderText: "deepseek-ai/DeepSeek-V4-Flash"
             }
 
+            PlasmaComponents3.Label {
+                text: i18n("Stream output:")
+            }
             QQC2.CheckBox {
                 id: sfStream
-                text: i18n("Stream output")
-                Layout.columnSpan: 2
                 Layout.fillWidth: true
                 Layout.topMargin: Kirigami.Units.smallSpacing
             }
