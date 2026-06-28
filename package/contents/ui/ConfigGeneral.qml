@@ -41,6 +41,23 @@ KCMUtils.SimpleKCM {
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
 
+        // ── System Prompt (shared by all AI engines) ─────────
+        Kirigami.Heading {
+            level: 3
+            text: i18n("System Prompt")
+            Layout.fillWidth: true
+            Layout.topMargin: Kirigami.Units.smallSpacing
+        }
+
+        QQC2.TextArea {
+            id: promptField
+            Layout.fillWidth: true
+            placeholderText: i18n("Enter system prompt for the AI translator…")
+            wrapMode: Text.WordWrap
+        }
+
+        Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
+
         // ── DeepSeek settings ────────────────────────────────
         Kirigami.Heading {
             level: 3
@@ -150,7 +167,6 @@ KCMUtils.SimpleKCM {
                 stepSize: 1
                 editable: true
                 Layout.fillWidth: true
-                Layout.maximumWidth: Kirigami.Units.gridUnit * 10
 
                 // Scale: internal int 0-20 → display 0.0-2.0
                 readonly property int factor: 10
@@ -187,7 +203,6 @@ KCMUtils.SimpleKCM {
                 stepSize: 5
                 editable: true
                 Layout.fillWidth: true
-                Layout.maximumWidth: Kirigami.Units.gridUnit * 10
 
                 // Scale: internal int 0-100 → display 0.00-1.00
                 readonly property int factor: 100
@@ -223,7 +238,6 @@ KCMUtils.SimpleKCM {
                 to: 384000
                 stepSize: 256
                 Layout.fillWidth: true
-                Layout.maximumWidth: Kirigami.Units.gridUnit * 10
                 editable: true
             }
 
@@ -239,24 +253,6 @@ KCMUtils.SimpleKCM {
 
         Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
 
-        // ── System Prompt (shared by all AI engines) ─────────
-        Kirigami.Heading {
-            level: 3
-            text: i18n("System Prompt")
-            Layout.fillWidth: true
-            Layout.topMargin: Kirigami.Units.largeSpacing
-        }
-
-        QQC2.TextArea {
-            id: promptField
-            Layout.fillWidth: true
-            Layout.minimumHeight: Kirigami.Units.gridUnit * 4
-            Layout.maximumWidth: Kirigami.Units.gridUnit * 30
-            placeholderText: i18n("Enter system prompt for the AI translator…")
-            wrapMode: Text.WordWrap
-        }
-
-        Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
         // ── SiliconFlow settings ─────────────────────────
         Kirigami.Heading {
             level: 3
