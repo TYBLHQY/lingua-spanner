@@ -33,14 +33,14 @@ lingua-spanner/
 │   │   └── ui/
 │   │       ├── main.qml              # PlasmoidItem: UI, orchestration, shortcuts
 │   │       ├── ConfigGeneral.qml     # Settings form
-│   │       ├── PasteSelectionHelper.qml  # Wraps ProcessHelper for xclip
+│   │       ├── PasteSelectionHelper.qml  # Wraps ProcessHelper for QClipboard
 │   │       └── services/
 │   │           ├── DeepSeekService.qml
 │   │           ├── SiliconFlowService.qml
 │   │           ├── FreeDictionaryApiService.qml
 │   │           └── YoudaoWebNewService.qml
 ├── src/
-│   └── ProcessHelper.h/.cpp     # QML module: xclip wrapper + QClipboard listener
+│   └── ProcessHelper.h/.cpp     # QML module: QClipboard PRIMARY selection listener
 ├── tests/
 │   ├── diagnostic.qml           # Interactive diagnostic UI (qml6 -I ...)
 │   └── tst_ProcessHelper.qml    # QTest unit tests for ProcessHelper
@@ -51,7 +51,7 @@ lingua-spanner/
 
 ### Pure QML Plasmoid (primary)
 
-All translation logic is pure QML. A small C++ helper module (`ProcessHelper`) provides xclip access and PRIMARY selection timestamp tracking via `QClipboard`.
+All translation logic is pure QML. A small C++ helper module (`ProcessHelper`) provides PRIMARY selection reading via `QClipboard`.
 
 | Service | API | Backend |
 |---------|-----|---------|
@@ -72,7 +72,7 @@ Shortcut/click → `handlePanelOpened()`:
 
 ### Selection freshness (`ProcessHelper`)
 
-`ProcessHelper` constructor connects `QGuiApplication::clipboard()->changed(QClipboard::Selection)` and records `m_selectionTimestamp`. When xclip async read completes, `main.qml` checks `elapsed <= 1000` — stale selections (>1s since last change) are silently ignored, replacing the old `clearSelection()` approach.
+`ProcessHelper` constructor connects `QGuiApplication::clipboard()->changed(QClipboard::Selection)` and records `m_selectionTimestamp`. When `readPrimarySelection()` is called, `main.qml` checks `elapsed <= 1000` — stale selections (>1s since last change) are silently ignored, falling through to focus the input field.
 
 ## Development
 

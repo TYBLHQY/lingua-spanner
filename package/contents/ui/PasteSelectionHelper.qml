@@ -1,7 +1,7 @@
 // ── Paste Selection Helper ──────────────────────────────────
 // Reads PRIMARY selection text from the focused window.
-// Uses the C++ ProcessHelper (LinguaSpannerHelper) which wraps
-// QProcess to run xclip synchronously.
+// Uses the C++ ProcessHelper (LinguaSpannerHelper) which reads
+// PRIMARY selection directly via QClipboard — no external tool needed.
 // Selection freshness is determined by ProcessHelper.selectionTimestamp
 // (updated via QClipboard when PRIMARY owner changes).
 
@@ -15,12 +15,6 @@ QtObject {
 
     /// Read from PRIMARY selection (X11 middle-click / Wayland highlight)
     function readSelection() {
-        return proc.readProcessOutput("xclip", ["-o", "-selection", "primary"])
-    }
-
-    /// Read PRIMARY selection asynchronously.
-    /// Results arrive via ProcessHelper.selectionReady / selectionError signals.
-    function readSelectionAsync() {
-        proc.readSelectionAsync()
+        return proc.readPrimarySelection()
     }
 }

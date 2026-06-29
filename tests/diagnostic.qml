@@ -1,6 +1,6 @@
 // ── Lingua Spanner Diagnostic ──────────────────────────────
 // Run: qml6 -I ../package/contents/lib diagnostic.qml
-// Tests: ProcessHelper (xclip), Youdao, DeepSeek
+// Tests: ProcessHelper (QClipboard), Youdao, DeepSeek
 
 import QtQuick
 import QtQuick.Window
@@ -13,7 +13,7 @@ Window {
     visible: true
     title: "Lingua Spanner Diagnostic"
 
-    // Creaate once, use everywhere
+    // Create once, use everywhere
     readonly property ProcessHelper proc: ProcessHelper {}
 
     Column {
@@ -25,30 +25,18 @@ Window {
 
         // ── ProcessHelper test ────────────────────────────
         Rectangle { width: parent.width; height: 1; color: "#ccc" }
-        Label { text: "1. ProcessHelper (xclip)"; font.bold: true }
+        Label { text: "1. ProcessHelper (QClipboard PRIMARY)"; font.bold: true }
 
         Label { id: primaryLabel; text: "PRIMARY: —"; color: "gray"; wrapMode: Text.WordWrap; width: parent.width }
-        Label { id: clipboardLabel; text: "CLIPBOARD: —"; color: "gray"; wrapMode: Text.WordWrap; width: parent.width }
 
         Button {
             text: "Read PRIMARY selection"
             onClicked: {
-                var text = proc.readProcessOutput("xclip", ["-o", "-selection", "primary"])
+                var text = proc.readPrimarySelection()
                 primaryLabel.text = text.length > 0
                     ? "PRIMARY: \"" + text + "\""
                     : "PRIMARY: (empty)"
                 primaryLabel.color = text.length > 0 ? "green" : "red"
-            }
-        }
-
-        Button {
-            text: "Read CLIPBOARD"
-            onClicked: {
-                var text = proc.readProcessOutput("xclip", ["-o", "-selection", "clipboard"])
-                clipboardLabel.text = text.length > 0
-                    ? "CLIPBOARD: \"" + text + "\""
-                    : "CLIPBOARD: (empty)"
-                clipboardLabel.color = text.length > 0 ? "green" : "red"
             }
         }
 
@@ -60,10 +48,7 @@ Window {
         Button {
             text: "Simulate: pick + translate"
             onClicked: {
-                var picked = proc.readProcessOutput("xclip", ["-o", "-selection", "primary"])
-                if (!picked || picked.trim().length === 0) {
-                    picked = proc.readProcessOutput("xclip", ["-o", "-selection", "clipboard"])
-                }
+                var picked = proc.readPrimarySelection()
                 if (picked && picked.trim().length > 0) {
                     flowLabel.text = "✅ Picked: \"" + picked + "\""
                     flowLabel.color = "green"

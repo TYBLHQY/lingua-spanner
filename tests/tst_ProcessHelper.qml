@@ -7,43 +7,23 @@ import LinguaSpannerHelper
 TestCase {
     name: "ProcessHelper"
 
-    function test_xclipPrimary() {
+    function test_readPrimarySelection_returnsString() {
         var ph = ProcessHelper {}
-        var result = ph.readProcessOutput("which", ["xclip"])
-        verify(result.length > 0, "xclip should be installed: " + result)
-    }
-
-    function test_xclipReadable() {
-        var ph = ProcessHelper {}
-        // Reading from PRIMARY without selection should return empty, not crash
-        var result = ph.readProcessOutput("xclip", ["-o", "-selection", "primary"])
-        // It may return empty or the current selection - either is fine
-        // Just verify it doesn't throw
+        var result = ph.readPrimarySelection()
+        // Should always return a string (possibly empty)
         compare(typeof result, "string")
     }
 
-    function test_clipboardReadable() {
+    function test_selectionTimestamp_property() {
         var ph = ProcessHelper {}
-        var result = ph.readProcessOutput("xclip", ["-o", "-selection", "clipboard"])
-        compare(typeof result, "string")
+        verify(typeof ph.selectionTimestamp === "number")
+        verify(ph.selectionTimestamp >= 0)
     }
 
-    function test_invalidCommand() {
-        var ph = ProcessHelper {}
-        var result = ph.readProcessOutput("nonexistent-command-12345", [])
-        compare(result, "")
-    }
-
-    function test_timeout() {
-        var ph = ProcessHelper {}
-        // A very short timeout should cause the command to be killed
-        var result = ph.readProcessOutput("sleep", ["10"], 100)
-        compare(result, "")
-    }
-
-    function test_echo() {
-        var ph = ProcessHelper {}
-        var result = ph.readProcessOutput("echo", ["hello world"])
-        compare(result, "hello world")
+    function test_multipleInstances() {
+        var ph1 = ProcessHelper {}
+        var ph2 = ProcessHelper {}
+        compare(typeof ph1.readPrimarySelection(), "string")
+        compare(typeof ph2.readPrimarySelection(), "string")
     }
 }

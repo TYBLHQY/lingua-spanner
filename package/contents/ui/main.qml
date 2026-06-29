@@ -8,7 +8,7 @@ import org.kde.plasma.components as PlasmaComponents3
 import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
 
-// ── Custom QML plugin (xclip via QProcess) ───────────────
+// ── Custom QML plugin (QClipboard PRIMARY selection) ──────
 import "../lib/LinguaSpannerHelper"
 
 // ── Translation services ───────────────────────────────────
@@ -112,15 +112,8 @@ PlasmoidItem {
     // ── Performance timing for async selection
     property var _tPanelOpen: 0
 
-    // ── PasteSelectionHelper (QProcess xclip wrapper) ───────
+    // ── PasteSelectionHelper (reads PRIMARY via QClipboard) ─
     PasteSelectionHelper { id: pasteSelectionHelper }
-
-    // ── Async selection result handler ──────────────────────
-    Connections {
-        target: pasteSelectionHelper.proc
-        function onSelectionReady(text) { root.handlePickedSelection(text) }
-        function onSelectionError(error) { console.log("selectionError:", error) }
-    }
 
     // ── Dim parenthetical notes gray ────────────────────
     function grayBrackets(text) {
@@ -238,14 +231,10 @@ PlasmoidItem {
         var fromShortcut = !root._openedByClick
         root._openedByClick = false
 
-        // Performance timing
-        root._tPanelOpen = Date.now()
-        console.log("panel open", root._tPanelOpen)
-
         if (fromShortcut) {
-            // Async path — panel stays interactive while xclip runs
-            pasteSelectionHelper.readSelectionAsync()
-            console.log("handlePanelOpened: fired async selection read")
+            // Read PRIMARY selection synchronously via QClipboard
+            var picked = pasteSelectionHelper.readSelection()
+            root.handlePickedSelection(picked)
             return
         }
 
@@ -258,7 +247,7 @@ PlasmoidItem {
         }
     }
 
-    /// Handles async selection result
+    /// Handles selection result
     function handlePickedSelection(text) {
         // Freshness check: only accept PRIMARY content if the selection
         // owner changed within the last 1 second. Older content is stale

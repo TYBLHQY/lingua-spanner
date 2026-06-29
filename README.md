@@ -67,7 +67,6 @@ journalctl -f -o cat | grep -E "ProcessHelper|qml:"
 |------|------|
 | Qt6 (Quick, Gui) | QML 运行时 + QClipboard |
 | KF6 (Plasma, I18n, Config, KCM) | Plasma 部件框架 |
-| xclip | 读取选中文本（PRIMARY selection） |
 
 ## 许可
 

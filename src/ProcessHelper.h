@@ -1,15 +1,11 @@
-// ── Process Helper — lightweight xclip wrapper for QML ───
-// Exposes QProcess as a Q_INVOKABLE singleton for reading
-// system clipboard / PRIMARY selection from QML.
-// Also tracks PRIMARY selection change timestamps via
-// QClipboard::changed to detect stale selections.
+// ── Process Helper — QClipboard PRIMARY selection for QML ──
+// Reads PRIMARY selection via QClipboard, no external xclip needed.
+// Tracks selection change timestamps for freshness checks.
 
 #ifndef PROCESHELPER_H
 #define PROCESHELPER_H
 
 #include <QObject>
-#include <QStringList>
-#include <QProcess>
 #include <QtQml>
 
 class ProcessHelper : public QObject
@@ -25,29 +21,18 @@ public:
     explicit ProcessHelper(QObject *parent = nullptr);
     ~ProcessHelper() override = default;
 
-    /// Run a command synchronously and return stdout as QString.
-    /// On failure (non-zero exit / timeout) returns an empty string.
-    Q_INVOKABLE QString readProcessOutput(const QString &program,
-                                          const QStringList &args,
-                                          int timeoutMs = 3000);
-
-    /// Run xclip -selection primary asynchronously.
-    /// Results arrive via selectionReady / selectionError signals.
-    Q_INVOKABLE void readSelectionAsync(int timeoutMs = 3000);
+    /// Read PRIMARY selection text synchronously via QClipboard.
+    /// Returns empty string if no selection or selection empty.
+    Q_INVOKABLE QString readPrimarySelection();
 
     /// Last PRIMARY selection change timestamp (ms since epoch).
     qint64 selectionTimestamp() const { return m_selectionTimestamp; }
 
 signals:
-    /// Emitted when xclip completes successfully.
-    void selectionReady(const QString &text);
-    /// Emitted when xclip fails or times out.
-    void selectionError(const QString &error);
     /// Emitted when PRIMARY selection owner changes.
     void selectionTimestampChanged();
 
 private:
-    QProcess *m_currentProcess = nullptr;
     qint64 m_selectionTimestamp = 0;
 };
 
