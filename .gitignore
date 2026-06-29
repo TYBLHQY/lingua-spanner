@@ -27,6 +27,10 @@ Thumbs.db
 # ── Plasma ───────────────────────────────
 *.plasmoid
 
+# ── CMake-generated QML module metadata ──
+*.qmltypes
+*_qml_module_dir_map.qrc
+
 # ── Session ──────────────────────────────
 .claude/
 
