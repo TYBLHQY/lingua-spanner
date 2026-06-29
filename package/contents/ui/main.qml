@@ -122,9 +122,14 @@ PlasmoidItem {
         function onSelectionError(error) { console.log("selectionError:", error) }
     }
 
-    // ── Format definition text (split （notes） into dimmed) ─
-    function formatDefinition(text) {
-        return text.replace(/（[^）]*）/g, function(m) { return '<font color="gray">' + m + '</font>' })
+    // ── Dim parenthetical notes gray ────────────────────
+    function grayBrackets(text) {
+        return text
+            .replace(/（[^）]*）/g,       m => '<font color="gray">' + m + '</font>')
+            .replace(/\([^)]*\)/g,        m => '<font color="gray">' + m + '</font>')
+            .replace(/【[^】]*】/g,       m => '<font color="gray">' + m + '</font>')
+            .replace(/\[[^\]]*\]/g,       m => '<font color="gray">' + m + '</font>')
+            .replace(/\{[^}]*\}/g,        m => '<font color="gray">' + m + '</font>')
     }
 
     // ── Translation handler ─────────────────────────────────
@@ -704,7 +709,7 @@ PlasmoidItem {
                                                     right: parent.right
                                                     margins: Kirigami.Units.smallSpacing
                                                 }
-                                                text: formatDefinition(modelData)
+                                                text: root.grayBrackets(modelData)
                                                 textFormat: TextEdit.RichText
                                                 wrapMode: TextEdit.WordWrap
                                                 font.pixelSize: root.fontSizeSecondary
@@ -858,7 +863,7 @@ PlasmoidItem {
                                                     right: parent.right
                                                     margins: Kirigami.Units.smallSpacing
                                                 }
-                                                text: formatDefinition(modelData)
+                                                text: root.grayBrackets(modelData)
                                                 textFormat: TextEdit.RichText
                                                 wrapMode: TextEdit.WordWrap
                                                 font.pixelSize: root.fontSizeSecondary
@@ -943,7 +948,8 @@ PlasmoidItem {
                             }
 
                             TextEdit {
-                                text: root.streamingTranslation !== "" ? root.streamingTranslation : i18n("Waiting for response…")
+                                text: root.streamingTranslation !== "" ? root.grayBrackets(root.streamingTranslation) : i18n("Waiting for response…")
+                                textFormat: TextEdit.RichText
                                 font.pixelSize: root.fontSizeBase
                                 wrapMode: TextEdit.WordWrap
                                 Layout.fillWidth: true
@@ -1013,7 +1019,8 @@ PlasmoidItem {
                                 }
 
                                 TextEdit {
-                                    text: modelData.translation
+                                    text: root.grayBrackets(modelData.translation)
+                                    textFormat: TextEdit.RichText
                                     font.pixelSize: root.fontSizeBase
                                     wrapMode: TextEdit.WordWrap
                                     Layout.fillWidth: true
