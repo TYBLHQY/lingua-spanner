@@ -130,6 +130,7 @@ PlasmoidItem {
             .replace(/【[^】]*】/g,       m => '<font color="gray">' + m + '</font>')
             .replace(/\[[^\]]*\]/g,       m => '<font color="gray">' + m + '</font>')
             .replace(/\{[^}]*\}/g,        m => '<font color="gray">' + m + '</font>')
+            .replace(/\n/g, '<br>')
     }
 
     // ── Translation handler ─────────────────────────────────
