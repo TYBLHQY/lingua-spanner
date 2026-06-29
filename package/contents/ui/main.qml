@@ -28,7 +28,11 @@ PlasmoidItem {
     readonly property double deepseekTemperature: Plasmoid.configuration.deepseekTemperature !== undefined ? Plasmoid.configuration.deepseekTemperature : 1.0
     readonly property int deepseekMaxTokens: Plasmoid.configuration.deepseekMaxTokens || 4096
     readonly property double deepseekTopP: Plasmoid.configuration.deepseekTopP !== undefined ? Plasmoid.configuration.deepseekTopP : 1.0
-    readonly property string deepseekSystemPrompt: Plasmoid.configuration.deepseekSystemPrompt || ""
+    readonly property string systemPromptDefault: "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
+    readonly property string systemPrompt: {
+        var v = Plasmoid.configuration.systemPrompt
+        return (v && v.trim().length > 0) ? v.trim() : systemPromptDefault
+    }
     readonly property bool deepseekStream: Plasmoid.configuration.deepseekStream !== undefined ? Plasmoid.configuration.deepseekStream : true
     readonly property string siliconFlowApiKey: Plasmoid.configuration.siliconFlowApiKey || ""
     readonly property string siliconFlowModel: Plasmoid.configuration.siliconFlowModel || "deepseek-ai/DeepSeek-V4-Flash"
@@ -70,6 +74,12 @@ PlasmoidItem {
 
     // ── DeepSeek history (in-memory) ────────────────────────
     property var dsHistory: []
+
+    // When the system prompt changes, clear history to avoid
+    // stale cached results being returned without a new API call.
+    onSystemPromptChanged: {
+        dsHistory = []
+    }
 
     function addHistory(input, translation) {
         var entry = findInHistory(input)
@@ -148,7 +158,7 @@ PlasmoidItem {
                 translating = false
             } else {
                 streamingInput = inputText
-                siliconFlowService.translate(inputText, siliconFlowApiKey, siliconFlowModel, "", null, 4096, null, siliconFlowStream)
+                siliconFlowService.translate(inputText, siliconFlowApiKey, siliconFlowModel, systemPrompt, null, 4096, null, siliconFlowStream)
             }
         } else {
             // deepseek — check history cache first
@@ -162,7 +172,7 @@ PlasmoidItem {
                 translating = false
             } else {
                 streamingInput = inputText
-                deepseekService.translate(inputText, deepseekApiKey, deepseekModel, deepseekSystemPrompt, deepseekTemperature, deepseekMaxTokens, deepseekTopP, deepseekStream)
+                deepseekService.translate(inputText, deepseekApiKey, deepseekModel, systemPrompt, deepseekTemperature, deepseekMaxTokens, deepseekTopP, deepseekStream)
             }
         }
     }

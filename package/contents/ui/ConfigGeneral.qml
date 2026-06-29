@@ -18,8 +18,8 @@ KCMUtils.SimpleKCM {
     property string cfg_deepseekModelDefault: "deepseek-v4-flash"
     property string cfg_deepseekModelList: ""
     property string cfg_deepseekModelListDefault: ""
-    property alias cfg_deepseekSystemPrompt: promptField.text
-    property string cfg_deepseekSystemPromptDefault: "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
+    property alias cfg_systemPrompt: promptField.text
+    property string cfg_systemPromptDefault: "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
     property double cfg_deepseekTemperature: 1.0
     property double cfg_deepseekTemperatureDefault: 1.0
     property alias cfg_deepseekMaxTokens: maxTokensSpin.value

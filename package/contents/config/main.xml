@@ -26,7 +26,7 @@
     <entry name="deepseekTopP" type="Double">
       <default>1.0</default>
     </entry>
-    <entry name="deepseekSystemPrompt" type="String">
+    <entry name="systemPrompt" type="String">
       <default>You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations.</default>
     </entry>
     <entry name="deepseekStream" type="Bool">

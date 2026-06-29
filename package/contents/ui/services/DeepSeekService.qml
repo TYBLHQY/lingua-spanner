@@ -23,9 +23,7 @@ QtObject {
 
         var url = "https://api.deepseek.com/chat/completions"
 
-        var systemContent = systemPrompt && systemPrompt.trim().length > 0
-            ? systemPrompt.trim()
-            : "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
+        var systemContent = systemPrompt ? systemPrompt.trim() : ""
 
         var body = {
             model: model || "deepseek-v4-flash",
