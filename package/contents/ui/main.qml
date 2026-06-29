@@ -18,6 +18,7 @@ PlasmoidItem {
     id: root
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
+    hideOnWindowDeactivate: !root.pinned
 
     // ── Config shortcuts ────────────────────────────────────
     readonly property var _modeOrder: JSON.parse(Plasmoid.configuration.modeOrder || '["youdao","deepseek","siliconflow","dictionary"]')
@@ -94,6 +95,9 @@ PlasmoidItem {
 
     // ── Distinguish click (just toggle) from shortcut (pick+paste)
     property bool _openedByClick: false
+
+    // ── Pin state ──────────────────────────────────────────
+    property bool pinned: false
 
     // ── Performance timing for async selection
     property var _tPanelOpen: 0
@@ -426,11 +430,16 @@ PlasmoidItem {
                     }
 
                     QQC2.Button {
-                        icon.name: "translate"
+                        icon.name: root.pinned ? "window-pin" : "window-unpin"
                         implicitWidth: Kirigami.Units.iconSizes.medium
                         implicitHeight: Kirigami.Units.iconSizes.medium
-                        enabled: inputField.text.trim().length > 0 && !root.translating
-                        onClicked: root.translate(inputField.text)
+                        onClicked: root.pinned = !root.pinned
+                        Accessible.name: root.pinned ? i18n("Unpin") : i18n("Pin")
+                        QQC2.ToolTip {
+                            text: root.pinned ? i18n("Pinned: stay open when focus changes") : i18n("Pin to keep open when switching windows")
+                            delay: Kirigami.Units.toolTipDelay
+                            visible: hovered
+                        }
                     }
                 }
             }
@@ -676,19 +685,22 @@ PlasmoidItem {
                                             Layout.leftMargin: Kirigami.Units.smallSpacing
                                             color: Kirigami.Theme.backgroundColor
                                             radius: Kirigami.Units.smallSpacing
-                                            implicitHeight: trLabel.implicitHeight + Kirigami.Units.smallSpacing
+                                            implicitHeight: trEdit.height + Kirigami.Units.smallSpacing
 
-                                            PlasmaComponents3.Label {
-                                                id: trLabel
+                                            TextEdit {
+                                                id: trEdit
                                                 anchors {
                                                     left: parent.left
                                                     right: parent.right
                                                     margins: Kirigami.Units.smallSpacing
                                                 }
                                                 text: formatDefinition(modelData)
-                                                textFormat: Text.StyledText
-                                                wrapMode: Text.WordWrap
+                                                textFormat: TextEdit.RichText
+                                                wrapMode: TextEdit.WordWrap
                                                 font.pixelSize: root.fontSizeSecondary
+                                                readOnly: true
+                                                selectByMouse: true
+                                                height: contentHeight
                                             }
                                         }
                                     }
@@ -827,19 +839,22 @@ PlasmoidItem {
                                             Layout.leftMargin: Kirigami.Units.smallSpacing
                                             color: Kirigami.Theme.backgroundColor
                                             radius: Kirigami.Units.smallSpacing
-                                            implicitHeight: dictTrLabel.implicitHeight + Kirigami.Units.smallSpacing
+                                            implicitHeight: dictTrEdit.height + Kirigami.Units.smallSpacing
 
-                                            PlasmaComponents3.Label {
-                                                id: dictTrLabel
+                                            TextEdit {
+                                                id: dictTrEdit
                                                 anchors {
                                                     left: parent.left
                                                     right: parent.right
                                                     margins: Kirigami.Units.smallSpacing
                                                 }
                                                 text: formatDefinition(modelData)
-                                                textFormat: Text.StyledText
-                                                wrapMode: Text.WordWrap
+                                                textFormat: TextEdit.RichText
+                                                wrapMode: TextEdit.WordWrap
                                                 font.pixelSize: root.fontSizeSecondary
+                                                readOnly: true
+                                                selectByMouse: true
+                                                height: contentHeight
                                             }
                                         }
                                     }
@@ -917,11 +932,14 @@ PlasmoidItem {
                                 Layout.fillWidth: true
                             }
 
-                            PlasmaComponents3.Label {
+                            TextEdit {
                                 text: root.streamingTranslation !== "" ? root.streamingTranslation : i18n("Waiting for response…")
                                 font.pixelSize: root.fontSizeBase
-                                wrapMode: Text.WordWrap
+                                wrapMode: TextEdit.WordWrap
                                 Layout.fillWidth: true
+                                readOnly: true
+                                selectByMouse: true
+                                height: contentHeight
                             }
                         }
                     }
@@ -955,10 +973,10 @@ PlasmoidItem {
                                     spacing: Kirigami.Units.smallSpacing
 
                                     PlasmaComponents3.Label {
-                                        text: modelData.isNew ? i18n("NEW") : i18n("HISTORY")
+                                        text: modelData.isNew ? i18n("[NEW]") : i18n("[HISTORY]")
                                         font.bold: true
                                         font.pixelSize: root.fontSizeSmall
-                                        color: modelData.isNew ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.disabledTextColor
+                                        color: modelData.isNew ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.neutralTextColor
                                     }
 
                                     Item { Layout.fillWidth: true }
@@ -973,19 +991,25 @@ PlasmoidItem {
                                     }
                                 }
 
-                                PlasmaComponents3.Label {
+                                TextEdit {
                                     text: modelData.input
                                     font.pixelSize: root.fontSizeSecondary
                                     color: Kirigami.Theme.neutralTextColor
-                                    wrapMode: Text.WordWrap
+                                    wrapMode: TextEdit.WordWrap
                                     Layout.fillWidth: true
+                                    readOnly: true
+                                    selectByMouse: true
+                                    height: contentHeight
                                 }
 
-                                PlasmaComponents3.Label {
+                                TextEdit {
                                     text: modelData.translation
                                     font.pixelSize: root.fontSizeBase
-                                    wrapMode: Text.WordWrap
+                                    wrapMode: TextEdit.WordWrap
                                     Layout.fillWidth: true
+                                    readOnly: true
+                                    selectByMouse: true
+                                    height: contentHeight
                                 }
                             }
                         }
