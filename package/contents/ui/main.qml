@@ -118,6 +118,10 @@ PlasmoidItem {
     // ── Dim parenthetical notes gray ────────────────────
     function grayBrackets(text) {
         return text
+            // HTML entity angle brackets: &lt;史&gt; → dimmed gray
+            .replace(/&lt;([^&]*?)&gt;/g,                  m => '<font color="gray">' + m + '</font>')
+            // Literal <...> with short content (excludes <br>)
+            .replace(/<([^>]{2,15})>/g,                   (m, c) => c === 'br' ? m : '<font color="gray">' + m + '</font>')
             .replace(/（[^）]*）/g,       m => '<font color="gray">' + m + '</font>')
             .replace(/\([^)]*\)/g,        m => '<font color="gray">' + m + '</font>')
             .replace(/【[^】]*】/g,       m => '<font color="gray">' + m + '</font>')
