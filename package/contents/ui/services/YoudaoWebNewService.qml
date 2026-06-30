@@ -98,8 +98,6 @@ QtObject {
         while ((match = wordExpRegex.exec(html)) !== null) {
             var po = match[1].trim()
             var trRaw = match[2].trim()
-            // Replace <> with fullwidth
-            trRaw = trRaw.replace(/</g, "〈").replace(/>/g, "〉")
 
             // Handle 【名】 prefix
             if (trRaw.indexOf("【名】") === 0) { // 【名】
@@ -107,7 +105,7 @@ QtObject {
                 trRaw = trRaw.substring(3)
             }
 
-            var tr = trRaw.split(/[；;]/).map(function(s) { return s.trim() }).filter(function(s) { return s.length > 0 })
+            var tr = [trRaw.trim()].filter(function(s) { return s.length > 0 })
             if (po.length > 0 && tr.length > 0) {
                 var key = po + "|" + tr.join(";")
                 if (!seen[key]) {
@@ -126,7 +124,7 @@ QtObject {
                 trRaw = match[2].trim()
                 // Remove trailing ；;
                 trRaw = trRaw.replace(/[；;]\s*$/, "")
-                tr = trRaw.split(/[；;]/).map(function(s) { return s.trim() }).filter(function(s) { return s.length > 0 })
+                tr = [trRaw.trim()].filter(function(s) { return s.length > 0 })
                 if (tr.length > 0) {
                     var key2 = po + "|" + tr.join(";")
                     if (!seen[key2]) {
