@@ -105,6 +105,9 @@ QtObject {
                 trRaw = trRaw.substring(3)
             }
 
+            // Replace ； with <br> for inline line breaks within a single tr entry
+            trRaw = trRaw.replace(/；/g, "<br>")
+
             var tr = [trRaw.trim()].filter(function(s) { return s.length > 0 })
             if (po.length > 0 && tr.length > 0) {
                 var key = po + "|" + tr.join(";")
@@ -124,6 +127,8 @@ QtObject {
                 trRaw = match[2].trim()
                 // Remove trailing ；;
                 trRaw = trRaw.replace(/[；;]\s*$/, "")
+                // Replace ； with <br> for inline line breaks within a single tr entry
+                trRaw = trRaw.replace(/；/g, "<br>")
                 tr = [trRaw.trim()].filter(function(s) { return s.length > 0 })
                 if (tr.length > 0) {
                     var key2 = po + "|" + tr.join(";")
