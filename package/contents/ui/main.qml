@@ -81,32 +81,7 @@ PlasmoidItem {
     property string streamingTranslation: ""
     property string streamingInput: ""
 
-    // ── DeepSeek history (DB-backed) ─────────────────────────
-    property var dbHistory: []
-
-    function _refreshHistory() {
-        try {
-            var json = pasteSelectionHelper.proc.exec(
-                "SELECT id, input_text, result_json FROM translations WHERE (engine='deepseek' OR engine='siliconflow') ORDER BY created_at DESC LIMIT 20",
-                "[]"
-            )
-            var rows = JSON.parse(json)
-            var history = []
-            for (var i = 0; i < rows.length; i++) {
-                var r = rows[i]
-                var parsed = JSON.parse(r.result_json || "{}")
-                history.push({
-                    id: r.id,
-                    input: r.input_text,
-                    translation: parsed.translate || ""
-                })
-            }
-            root.dbHistory = history
-        } catch (e) {
-            console.log("_refreshHistory failed:", e)
-        }
-    }
-
+    // ── History cache (DB-backed, used for duplicate detection) ─
     function _getCachedHistory(text) {
         try {
             var json = pasteSelectionHelper.proc.exec(
@@ -123,20 +98,6 @@ PlasmoidItem {
             }
         } catch (e) {}
         return null
-    }
-
-    function deleteHistory(index) {
-        try {
-            var entry = root.dbHistory[index]
-            if (!entry) return
-            pasteSelectionHelper.proc.exec(
-                "DELETE FROM translations WHERE id=?",
-                JSON.stringify([entry.id])
-            )
-            root._refreshHistory()
-        } catch (e) {
-            console.log("deleteHistory failed:", e)
-        }
     }
 
     // ── DB insert helper ─────────────────────────────────────
@@ -253,7 +214,6 @@ PlasmoidItem {
                     "UPDATE translations SET created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
                     JSON.stringify([cached.id])
                 )
-                Qt.callLater(root._refreshHistory)
                 translating = false
             } else if (!siliconFlowApiKey) {
                 errorMessage = i18n("SiliconFlow API key not configured")
@@ -271,7 +231,6 @@ PlasmoidItem {
                     "UPDATE translations SET created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
                     JSON.stringify([cached.id])
                 )
-                Qt.callLater(root._refreshHistory)
                 translating = false
             } else if (!deepseekApiKey) {
                 errorMessage = i18n("DeepSeek API key not configured")
@@ -282,8 +241,6 @@ PlasmoidItem {
             }
         }
     }
-
-    // ── History helpers (DB-backed, see _refreshHistory / _getCachedHistory) ─
 
     // ── Pick text from focused window when panel opens ────
     onExpandedChanged: {
@@ -300,7 +257,6 @@ PlasmoidItem {
     // Also handle initial load (plasmawindowed starts expanded)
     Component.onCompleted: {
         pasteSelectionHelper.proc.initDb()
-        root._refreshHistory()
         console.log("Component.onCompleted: expanded=", root.expanded)
         root._loadUiConfig()
         if (root.expanded) {
@@ -378,7 +334,6 @@ PlasmoidItem {
             streamingInput = ""
             if (result.translation) {
                 root._insertTranslation("deepseek", result)
-                Qt.callLater(root._refreshHistory)
             }
         }
         onError: function(msg) {
@@ -414,7 +369,6 @@ PlasmoidItem {
             streamingInput = ""
             if (result.translation) {
                 root._insertTranslation("siliconflow", result)
-                Qt.callLater(root._refreshHistory)
             }
         }
         onError: function(msg) {
@@ -1126,71 +1080,6 @@ PlasmoidItem {
                                 readOnly: true
                                 selectByMouse: true
                                 height: contentHeight
-                            }
-                        }
-                    }
-
-                    // ── AI engine history (DeepSeek / SiliconFlow) ──
-                    Repeater {
-                        id: histRepeater
-                        model: (root.currentMode === "deepseek" || root.currentMode === "siliconflow") ? root.dbHistory : []
-
-                        delegate: Rectangle {
-                            required property int index
-                            required property var modelData
-
-                            Layout.fillWidth: true
-                            radius: Kirigami.Units.smallSpacing
-                            color: Kirigami.Theme.backgroundColor
-                            border.color: Kirigami.Theme.disabledTextColor
-                            border.width: 1
-                            implicitHeight: histCol.implicitHeight + Kirigami.Units.smallSpacing * 2
-
-                            ColumnLayout {
-                                id: histCol
-                                anchors {
-                                    fill: parent
-                                    margins: Kirigami.Units.smallSpacing
-                                }
-                                spacing: Kirigami.Units.smallSpacing
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: Kirigami.Units.smallSpacing
-
-                                    Item { Layout.fillWidth: true }
-
-                                    QQC2.Button {
-                                        icon.name: "edit-delete"
-                                        flat: true
-                                        implicitWidth: Kirigami.Units.iconSizes.small
-                                        implicitHeight: Kirigami.Units.iconSizes.small
-                                        onClicked: root.deleteHistory(index)
-                                        Accessible.name: i18n("Delete history entry")
-                                    }
-                                }
-
-                                TextEdit {
-                                    text: modelData.input
-                                    font.pixelSize: root.fontSizeSecondary
-                                    color: Kirigami.Theme.neutralTextColor
-                                    wrapMode: TextEdit.WordWrap
-                                    Layout.fillWidth: true
-                                    readOnly: true
-                                    selectByMouse: true
-                                    height: contentHeight
-                                }
-
-                                TextEdit {
-                                    text: root.grayBrackets(modelData.translation)
-                                    textFormat: TextEdit.RichText
-                                    font.pixelSize: root.fontSizeBase
-                                    wrapMode: TextEdit.WordWrap
-                                    Layout.fillWidth: true
-                                    readOnly: true
-                                    selectByMouse: true
-                                    height: contentHeight
-                                }
                             }
                         }
                     }
