@@ -74,13 +74,17 @@ void ProcessHelper::initDb()
     q.exec(QStringLiteral("PRAGMA foreign_keys=ON"));
 
     // Schema — idempotent
+    // Drop legacy results table (replaced by translations below)
+    q.exec(QStringLiteral("DROP TABLE IF EXISTS results"));
     q.exec(QStringLiteral(
-        "CREATE TABLE IF NOT EXISTS results ("
-        "  id         INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  engine     TEXT    NOT NULL,"
-        "  input_text TEXT    NOT NULL,"
-        "  result     TEXT    NOT NULL,"
-        "  created_at TEXT    NOT NULL DEFAULT (datetime('now','localtime'))"
+        "CREATE TABLE IF NOT EXISTS translations ("
+        "  id          INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  input_text  TEXT    NOT NULL,"
+        "  engine      TEXT    NOT NULL,"
+        "  source_lang TEXT    NOT NULL DEFAULT '',"
+        "  target_lang TEXT    NOT NULL DEFAULT '',"
+        "  result_json TEXT    NOT NULL DEFAULT '{}',"
+        "  created_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S','now'))"
         ")"
     ));
 }

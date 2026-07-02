@@ -43,13 +43,13 @@ Item {
 
         function test_delete() {
             ph2.initDb()
-            ph2.exec("DELETE FROM results WHERE engine='t'", "[]")
-            ph2.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
-                JSON.stringify(["t","del","x"]))
-            var before = JSON.parse(ph2.exec("SELECT count(*) AS c FROM results WHERE engine='t'", "[]"))
+            ph2.exec("DELETE FROM translations WHERE engine='t'", "[]")
+            ph2.exec("INSERT INTO translations(input_text,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?)",
+                JSON.stringify(["del","t","","","x"]))
+            var before = JSON.parse(ph2.exec("SELECT count(*) AS c FROM translations WHERE engine='t'", "[]"))
             compare(before[0].c, 1)
-            ph2.exec("DELETE FROM results WHERE input_text=?", JSON.stringify(["del"]))
-            var after = JSON.parse(ph2.exec("SELECT count(*) AS c FROM results WHERE engine='t'", "[]"))
+            ph2.exec("DELETE FROM translations WHERE input_text=?", JSON.stringify(["del"]))
+            var after = JSON.parse(ph2.exec("SELECT count(*) AS c FROM translations WHERE engine='t'", "[]"))
             compare(after[0].c, 0)
         }
 
@@ -61,45 +61,47 @@ Item {
 
         function test_insert_select() {
             ph2.initDb()
-            ph2.exec("DELETE FROM results WHERE engine='t'", "[]")
-            ph2.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
-                JSON.stringify(["t","hello","world"]))
-            var json = ph2.exec("SELECT * FROM results WHERE engine='t'", "[]")
+            ph2.exec("DELETE FROM translations WHERE engine='t'", "[]")
+            ph2.exec("INSERT INTO translations(input_text,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?)",
+                JSON.stringify(["hello","t","en","zh","world"]))
+            var json = ph2.exec("SELECT * FROM translations WHERE engine='t'", "[]")
             var rows = JSON.parse(json)
             compare(rows.length, 1)
             compare(rows[0].input_text, "hello")
-            compare(rows[0].result, "world")
             compare(rows[0].engine, "t")
+            compare(rows[0].source_lang, "en")
+            compare(rows[0].target_lang, "zh")
+            compare(rows[0].result_json, "world")
             verify(!!rows[0].id, "id should be truthy")
             verify(!!rows[0].created_at, "created_at should be truthy")
         }
 
         function test_multiple_rows() {
             ph1.initDb()
-            ph1.exec("DELETE FROM results WHERE engine='t'", "[]")
-            ph1.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
-                JSON.stringify(["t","a","1"]))
-            ph1.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
-                JSON.stringify(["t","b","2"]))
-            var rows = JSON.parse(ph1.exec("SELECT result FROM results WHERE engine='t' ORDER BY input_text", "[]"))
+            ph1.exec("DELETE FROM translations WHERE engine='t'", "[]")
+            ph1.exec("INSERT INTO translations(input_text,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?)",
+                JSON.stringify(["a","t","","","1"]))
+            ph1.exec("INSERT INTO translations(input_text,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?)",
+                JSON.stringify(["b","t","","","2"]))
+            var rows = JSON.parse(ph1.exec("SELECT result_json FROM translations WHERE engine='t' ORDER BY input_text", "[]"))
             compare(rows.length, 2)
-            compare(rows[0].result, "1")
-            compare(rows[1].result, "2")
+            compare(rows[0].result_json, "1")
+            compare(rows[1].result_json, "2")
         }
 
         function test_reopen_persists_data() {
             ph3.initDb()
-            ph3.exec("DELETE FROM results WHERE engine='t'", "[]")
-            ph3.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
-                JSON.stringify(["t","k","v"]))
+            ph3.exec("DELETE FROM translations WHERE engine='t'", "[]")
+            ph3.exec("INSERT INTO translations(input_text,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?)",
+                JSON.stringify(["k","t","en","zh","v"]))
             ph3.closeDb()
 
             // New instance reads same DB
             ph1.initDb()
-            var rows = JSON.parse(ph1.exec("SELECT result FROM results WHERE engine='t' AND input_text='k'", "[]"))
-            compare(rows[0].result, "v")
-            ph1.exec("DELETE FROM results WHERE engine='t'", "[]")
-            var empty = JSON.parse(ph1.exec("SELECT count(*) AS c FROM results WHERE engine='t'", "[]"))
+            var rows = JSON.parse(ph1.exec("SELECT result_json FROM translations WHERE engine='t' AND input_text='k'", "[]"))
+            compare(rows[0].result_json, "v")
+            ph1.exec("DELETE FROM translations WHERE engine='t'", "[]")
+            var empty = JSON.parse(ph1.exec("SELECT count(*) AS c FROM translations WHERE engine='t'", "[]"))
             compare(empty[0].c, 0)
         }
 

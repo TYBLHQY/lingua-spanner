@@ -150,9 +150,9 @@ Window {
                 onClicked: {
                     try {
                         proc.initDb()
-                        proc.exec("DELETE FROM results WHERE engine='test'", "[]")
-                        proc.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
-                            JSON.stringify(["test","hello","world"]))
+                        proc.exec("DELETE FROM translations WHERE engine='test'", "[]")
+                            proc.exec("INSERT INTO translations(input_text,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?)",
+                            JSON.stringify(["hello","test","","","world"]))
                         sqlLabel.text = "✅ INSERT OK"
                         sqlLabel.color = "green"
                     } catch(e) {
@@ -166,7 +166,7 @@ Window {
                 onClicked: {
                     try {
                         proc.initDb()
-                        var json = proc.exec("SELECT * FROM results WHERE engine='test'", "[]")
+                        var json = proc.exec("SELECT * FROM translations WHERE engine='test'", "[]")
                         var rows = JSON.parse(json)
                         sqlLabel.text = "✅ SELECT: " + rows.length + " rows\n" + JSON.stringify(rows, null, 2)
                         sqlLabel.color = "green"
@@ -181,8 +181,8 @@ Window {
                 onClicked: {
                     try {
                         proc.initDb()
-                        proc.exec("DELETE FROM results WHERE engine='test'", "[]")
-                        var json = proc.exec("SELECT * FROM results WHERE engine='test'", "[]")
+                        proc.exec("DELETE FROM translations WHERE engine='test'", "[]")
+                        var json = proc.exec("SELECT * FROM translations WHERE engine='test'", "[]")
                         var rows = JSON.parse(json)
                         sqlLabel.text = "✅ DELETE OK, rows left: " + rows.length
                         sqlLabel.color = "green"

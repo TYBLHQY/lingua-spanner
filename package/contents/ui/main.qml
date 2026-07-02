@@ -103,6 +103,21 @@ PlasmoidItem {
         dsHistory = tmp
     }
 
+    // ── DB insert helper ─────────────────────────────────────
+    function _insertTranslation(engine, result) {
+        try {
+            var srcLang = result.source_lang || root.sourceLang
+            var tgtLang = result.target_lang || root.targetLang
+            var jsonStr = JSON.stringify(result)
+            pasteSelectionHelper.proc.exec(
+                "INSERT INTO translations(input_text,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?)",
+                JSON.stringify([root.inputText, engine, srcLang, tgtLang, jsonStr])
+            )
+        } catch (e) {
+            console.log("DB insert failed:", e)
+        }
+    }
+
     // ── Reference to inputField inside fullRepresentation ───
     property QtObject p_inputField: null
 
@@ -267,6 +282,7 @@ PlasmoidItem {
 
     // Also handle initial load (plasmawindowed starts expanded)
     Component.onCompleted: {
+        pasteSelectionHelper.proc.initDb()
         console.log("Component.onCompleted: expanded=", root.expanded)
         root._loadUiConfig()
         if (root.expanded) {
@@ -326,6 +342,7 @@ PlasmoidItem {
         onFinished: function(result) {
             youdaoResult = result
             translating = false
+            root._insertTranslation("youdao", result)
         }
         onError: function(msg) {
             youdaoResult = { error: msg }
@@ -344,6 +361,7 @@ PlasmoidItem {
             streamingInput = ""
             if (result.translation) {
                 root.addHistory(inputText, result.translation)
+                root._insertTranslation("deepseek", result)
             }
         }
         onError: function(msg) {
@@ -360,6 +378,7 @@ PlasmoidItem {
         onFinished: function(result) {
             dictionaryResult = result
             translating = false
+            root._insertTranslation("dictionary", result)
         }
         onError: function(msg) {
             dictionaryResult = { error: msg }
@@ -379,6 +398,7 @@ PlasmoidItem {
             streamingInput = ""
             if (result.translation) {
                 root.addHistory(inputText, result.translation)
+                root._insertTranslation("siliconflow", result)
             }
         }
         onError: function(msg) {
