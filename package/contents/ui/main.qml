@@ -1081,12 +1081,6 @@ PlasmoidItem {
                                 Layout.fillWidth: true
                                 spacing: Kirigami.Units.smallSpacing
 
-                                // ── Separator ────────────────
-                                Rectangle {
-                                    Layout.fillWidth: true; height: 1
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-
                                 // ── Translation ──────────────
                                 TextEdit {
                                     text: root.grayBrackets(root.aiResult ? root.aiResult.translate || root.streamingTranslation : "")
