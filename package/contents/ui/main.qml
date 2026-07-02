@@ -216,6 +216,8 @@ PlasmoidItem {
                     "UPDATE translations SET created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
                     JSON.stringify([cached.id])
                 )
+                streamingInput = root.inputText
+                streamingTranslation = cached.translation
                 translating = false
             } else if (!siliconFlowApiKey) {
                 errorMessage = i18n("SiliconFlow API key not configured")
@@ -233,6 +235,8 @@ PlasmoidItem {
                     "UPDATE translations SET created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
                     JSON.stringify([cached.id])
                 )
+                streamingInput = root.inputText
+                streamingTranslation = cached.translation
                 translating = false
             } else if (!deepseekApiKey) {
                 errorMessage = i18n("DeepSeek API key not configured")
