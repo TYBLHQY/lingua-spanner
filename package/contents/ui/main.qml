@@ -360,7 +360,6 @@ PlasmoidItem {
         onFinished: function(result) {
             youdaoResult = result
             translating = false
-            root._insertTranslation("youdao", result)
         }
         onError: function(msg) {
             youdaoResult = { error: msg }
@@ -396,7 +395,6 @@ PlasmoidItem {
         onFinished: function(result) {
             dictionaryResult = result
             translating = false
-            root._insertTranslation("dictionary", result)
         }
         onError: function(msg) {
             dictionaryResult = { error: msg }
