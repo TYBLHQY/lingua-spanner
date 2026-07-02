@@ -78,7 +78,7 @@ void ProcessHelper::initDb()
     q.exec(QStringLiteral("DROP TABLE IF EXISTS results"));
     q.exec(QStringLiteral(
         "CREATE TABLE IF NOT EXISTS translations ("
-        "  id            INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  id            TEXT    PRIMARY KEY,"
         "  input_text    TEXT    NOT NULL,"
         "  cleaned_input TEXT    NOT NULL DEFAULT '',"
         "  engine        TEXT    NOT NULL,"
@@ -88,6 +88,42 @@ void ProcessHelper::initDb()
         "  created_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S','now'))"
         ")"
     ));
+
+    // Migrate existing databases: INTEGER id → TEXT (UUID)
+    // SQLite can't ALTER COLUMN type, so rename → recreate → copy → drop.
+    {
+        QSqlQuery pragmaId(m_db);
+        pragmaId.exec(QStringLiteral("PRAGMA table_info(translations)"));
+        bool idIsInteger = false;
+        while (pragmaId.next()) {
+            if (pragmaId.value(1).toString() == QLatin1String("id")
+                && pragmaId.value(2).toString().contains(QLatin1String("INTEGER"))) {
+                idIsInteger = true;
+                break;
+            }
+        }
+        if (idIsInteger) {
+            q.exec(QStringLiteral("ALTER TABLE translations RENAME TO translations_old"));
+            q.exec(QStringLiteral(
+                "CREATE TABLE translations ("
+                "  id            TEXT    PRIMARY KEY,"
+                "  input_text    TEXT    NOT NULL,"
+                "  cleaned_input TEXT    NOT NULL DEFAULT '',"
+                "  engine        TEXT    NOT NULL,"
+                "  source_lang   TEXT    NOT NULL DEFAULT '',"
+                "  target_lang   TEXT    NOT NULL DEFAULT '',"
+                "  result_json   TEXT    NOT NULL DEFAULT '{}',"
+                "  created_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S','now'))"
+                ")"
+            ));
+            q.exec(QStringLiteral(
+                "INSERT INTO translations(id, input_text, cleaned_input, engine, source_lang, target_lang, result_json, created_at) "
+                "SELECT CAST(id AS TEXT), input_text, cleaned_input, engine, source_lang, target_lang, result_json, created_at "
+                "FROM translations_old"
+            ));
+            q.exec(QStringLiteral("DROP TABLE translations_old"));
+        }
+    }
 
     // Migrate existing databases that lack the cleaned_input column
     QSqlQuery pragma(q);

@@ -11,13 +11,31 @@ QtObject {
     signal streamingUpdate(string partialText)
     signal error(string message)
 
+    property var _xhr: null
+    property bool _aborted: false
+
+    function cancel() {
+        root._aborted = true
+        if (root._xhr) {
+            root._xhr.abort()
+            root._xhr = null
+        }
+    }
+
     function translate(text, apiKey, model, stream, temperature, maxTokens, topP, sourceLang, targetLang) {
+        root._xhr = null
+        root._aborted = false
         if (!text || text.trim().length === 0) {
             error("Empty text")
             return
         }
         if (!apiKey || apiKey.length === 0) {
             error("API key not configured")
+            return
+        }
+        // 源语言和目标语言相同时无需翻译
+        if (sourceLang && targetLang && sourceLang !== "auto" && targetLang !== "auto" && sourceLang === targetLang) {
+            error("Source and target languages are the same")
             return
         }
 
@@ -54,6 +72,7 @@ QtObject {
         body = JSON.stringify(body)
 
         var xhr = new XMLHttpRequest()
+        root._xhr = xhr
         xhr.open("POST", url)
         xhr.setRequestHeader("Content-Type", "application/json")
         xhr.setRequestHeader("Authorization", "Bearer " + apiKey)
@@ -117,6 +136,7 @@ QtObject {
 
                 // Finalize on DONE
                 if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (root._aborted) return
                     if (xhr.status === 200) {
                         // Parse the accumulated JSON from streaming
                         var result = { translation: accumulated }
@@ -145,6 +165,7 @@ QtObject {
 
             xhr.onreadystatechange = function() {
                 if (xhr.readyState !== XMLHttpRequest.DONE) return
+                if (root._aborted) return
 
                 if (xhr.status === 200) {
                     try {
@@ -177,10 +198,12 @@ QtObject {
         }
 
         xhr.onerror = function() {
+            if (root._aborted) return
             error("Network error while calling DeepSeek")
         }
 
         xhr.ontimeout = function() {
+            if (root._aborted) return
             error("DeepSeek request timed out")
         }
 

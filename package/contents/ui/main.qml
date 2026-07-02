@@ -18,7 +18,7 @@ PlasmoidItem {
     id: root
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
-    hideOnWindowDeactivate: !root.pinned
+    hideOnWindowDeactivate: true
 
     // ── Config shortcuts ────────────────────────────────────
     readonly property var _modeOrder: JSON.parse(Plasmoid.configuration.modeOrder || '["youdao","deepseek","siliconflow","dictionary"]')
@@ -80,12 +80,23 @@ PlasmoidItem {
     property bool translating: false
     property string errorMessage: ""
 
+    // ── 同语言翻译拦截 ──────────────────────────────
+    // AI 模式下 sourceLang 和 targetLang 显式相同时禁止翻译
+    readonly property bool _sameLangPair: (root.currentMode === "deepseek" || root.currentMode === "siliconflow")
+        && root.sourceLang !== "auto"
+        && root.targetLang !== "auto"
+        && root.sourceLang === root.targetLang
+
     // ── DeepSeek streaming display ──────────────────────────
     property string streamingTranslation: ""
     property string streamingInput: ""
 
     // ── Structured AI result (parsed JSON for display) ──────
     property var aiResult: null
+
+    // ── DB record ID (UUID) for the currently displayed AI result ─
+    // Used by deleteCurrentResult() to remove from the cache DB.
+    property string currentTranslationId: ""
 
     // ── Flat grid models for column-aligned display ────────
     readonly property var _flatWordModel: {
@@ -148,19 +159,107 @@ PlasmoidItem {
         return null
     }
 
+    // ── UUID generator ──────────────────────────────────────
+    function _generateUuid() {
+        var hex = "0123456789abcdef"
+        var uuid = ""
+        for (var i = 0; i < 36; i++) {
+            if (i === 8 || i === 13 || i === 18 || i === 23) {
+                uuid += "-"
+            } else if (i === 14) {
+                uuid += "4"
+            } else if (i === 19) {
+                uuid += hex[Math.floor(Math.random() * 4) + 8]  // 8,9,a,b
+            } else {
+                uuid += hex[Math.floor(Math.random() * 16)]
+            }
+        }
+        return uuid
+    }
+
     // ── DB insert helper ─────────────────────────────────────
     function _insertTranslation(engine, result) {
         try {
+            var uuid = root._generateUuid()
             var srcLang = result.source_lang || root.sourceLang
             var tgtLang = result.target_lang || root.targetLang
             var cleaned = result.cleaned_input || root.inputText
             var jsonStr = JSON.stringify(result)
             pasteSelectionHelper.proc.exec(
-                "INSERT INTO translations(input_text,cleaned_input,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?,?)",
-                JSON.stringify([root.inputText, cleaned, engine, srcLang, tgtLang, jsonStr])
+                "INSERT INTO translations(id,input_text,cleaned_input,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?,?,?)",
+                JSON.stringify([uuid, root.inputText, cleaned, engine, srcLang, tgtLang, jsonStr])
             )
+            root.currentTranslationId = uuid
         } catch (e) {
             console.log("DB insert failed:", e)
+            root.currentTranslationId = ""
+        }
+    }
+
+    // ── Delete current result (DB + UI state) ────────────────
+    function deleteCurrentResult() {
+        var idToDelete = root.currentTranslationId
+
+        // Fallback: if no tracked ID, look up by content
+        if (!idToDelete && root.inputText.length > 0) {
+            var engine = root.currentMode === "siliconflow" ? "siliconflow" : "deepseek"
+            try {
+                var rows = JSON.parse(pasteSelectionHelper.proc.exec(
+                    "SELECT id FROM translations WHERE input_text=? AND engine=? AND source_lang=? AND target_lang=? ORDER BY created_at DESC LIMIT 1",
+                    JSON.stringify([root.inputText, engine, root.sourceLang, root.targetLang])
+                ))
+                idToDelete = rows.length > 0 ? rows[0].id : ""
+            } catch (e) {
+                console.log("DB lookup for delete failed:", e)
+            }
+        }
+
+        if (idToDelete) {
+            try {
+                pasteSelectionHelper.proc.exec(
+                    "DELETE FROM translations WHERE id=?",
+                    JSON.stringify([idToDelete])
+                )
+                console.log("Deleted translation record id=" + idToDelete)
+            } catch (e) {
+                console.log("DB delete failed:", e)
+            }
+        } else {
+            console.log("deleteCurrentResult: no DB record found")
+        }
+
+        root.currentTranslationId = ""
+        root.aiResult = null
+        root.streamingTranslation = ""
+        root.streamingInput = ""
+        root.inputText = ""
+        if (root.p_inputField) {
+            root.p_inputField.text = ""
+        }
+        root.errorMessage = ""
+        // Focus input after clearing
+        if (root.p_inputField) {
+            root.p_inputField.forceActiveFocus()
+        }
+    }
+
+    // ── Cancel the current translation ─────────────────────────
+    function cancelTranslation() {
+        if (root.currentMode === "deepseek") {
+            deepseekService.cancel()
+        } else if (root.currentMode === "siliconflow") {
+            siliconFlowService.cancel()
+        }
+        root.translating = false
+        root.streamingTranslation = ""
+        root.streamingInput = ""
+        root.errorMessage = ""
+        // Focus input and select all so user can re-translate
+        if (root.p_inputField) {
+            root.p_inputField.forceActiveFocus()
+            if (root.p_inputField.text.trim().length > 0) {
+                root.p_inputField.selectAll()
+            }
         }
     }
 
@@ -169,9 +268,6 @@ PlasmoidItem {
 
     // ── Distinguish click (just toggle) from shortcut (pick+paste)
     property bool _openedByClick: false
-
-    // ── Pin state ──────────────────────────────────────────
-    property bool pinned: false
 
     // ── Performance timing for async selection
     property var _tPanelOpen: 0
@@ -246,12 +342,20 @@ PlasmoidItem {
         deepseekResult = null
         dictionaryResult = null
         root.aiResult = null
+        root.currentTranslationId = ""
 
         // Reset streaming state for new translation
         streamingTranslation = ""
         streamingInput = ""
 
         var mode = root.currentMode
+
+        // AI 模式下源语言和目标语言相同时禁止翻译
+        if ((mode === "deepseek" || mode === "siliconflow") && root._sameLangPair) {
+            errorMessage = i18n("Source and target languages are the same")
+            translating = false
+            return
+        }
 
         if (mode === "youdao") {
             youdaoService.fetch(inputText)
@@ -268,6 +372,7 @@ PlasmoidItem {
                 streamingInput = root.inputText
                 streamingTranslation = cached.translation
                 root.aiResult = cached.result
+                root.currentTranslationId = cached.id
                 translating = false
             } else if (!siliconFlowApiKey) {
                 errorMessage = i18n("SiliconFlow API key not configured")
@@ -288,6 +393,7 @@ PlasmoidItem {
                 streamingInput = root.inputText
                 streamingTranslation = cached.translation
                 root.aiResult = cached.result
+                root.currentTranslationId = cached.id
                 translating = false
             } else if (!deepseekApiKey) {
                 errorMessage = i18n("DeepSeek API key not configured")
@@ -529,13 +635,14 @@ PlasmoidItem {
                     }
 
                     QQC2.Button {
-                        icon.name: root.pinned ? "window-pin" : "window-unpin"
+                        icon.name: "edit-find"
+                        enabled: !root._sameLangPair
                         implicitWidth: Kirigami.Units.iconSizes.medium
                         implicitHeight: Kirigami.Units.iconSizes.medium
-                        onClicked: root.pinned = !root.pinned
-                        Accessible.name: root.pinned ? i18n("Unpin") : i18n("Pin")
+                        onClicked: root.translate(inputField.text)
+                        Accessible.name: i18n("Translate")
                         QQC2.ToolTip {
-                            text: root.pinned ? i18n("Pinned: stay open when focus changes") : i18n("Pin to keep open when switching windows")
+                            text: i18n("Translate")
                             delay: Kirigami.Units.toolTipDelay
                             visible: hovered
                         }
@@ -1079,50 +1186,65 @@ PlasmoidItem {
                             }
                             spacing: Kirigami.Units.smallSpacing
 
-                            // ── Loading dots (streaming only) ─────────
-                            Row {
+                            // ═════════════════════════════════════
+                            //  STREAMING MODE — raw text as it arrives
+                            // ═════════════════════════════════════
+                            ColumnLayout {
                                 visible: root.translating
-                                Layout.alignment: Qt.AlignRight
-                                spacing: 3
-                                Repeater {
-                                    model: 3
-                                    delegate: Rectangle {
-                                        width: 5; height: 5
-                                        radius: 2.5
-                                        color: Kirigami.Theme.highlightColor
-                                        opacity: 0.3
-                                        SequentialAnimation on opacity {
-                                            loops: Animation.Infinite
-                                            running: root.translating
-                                            PauseAnimation { duration: 200 * index }
-                                            NumberAnimation {
-                                                from: 0.3; to: 1.0; duration: 400; easing.type: Easing.InOutQuad
-                                            }
-                                            NumberAnimation {
-                                                from: 1.0; to: 0.3; duration: 400; easing.type: Easing.InOutQuad
+                                spacing: Kirigami.Units.smallSpacing
+                                Layout.fillWidth: true
+
+                                // ── Waiting state (no content yet) ──
+                                RowLayout {
+                                    visible: root.streamingTranslation === ""
+                                    spacing: 4
+
+                                    PlasmaComponents3.Label {
+                                        text: i18n("Waiting for response")
+                                        font.pixelSize: root.fontSizeBase
+                                        font.family: root.fontFamily || undefined
+                                        color: Kirigami.Theme.textColor
+                                    }
+
+                                    Row {
+                                        spacing: 3
+                                        Repeater {
+                                            model: 3
+                                            delegate: Rectangle {
+                                                width: 5; height: 5
+                                                radius: 2.5
+                                                color: Kirigami.Theme.highlightColor
+                                                opacity: 0.3
+                                                SequentialAnimation on opacity {
+                                                    loops: Animation.Infinite
+                                                    running: root.translating
+                                                    PauseAnimation { duration: 200 * index }
+                                                    NumberAnimation {
+                                                        from: 0.3; to: 1.0; duration: 400; easing.type: Easing.InOutQuad
+                                                    }
+                                                    NumberAnimation {
+                                                        from: 1.0; to: 0.3; duration: 400; easing.type: Easing.InOutQuad
+                                                    }
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                            // ═════════════════════════════════════
-                            //  STREAMING MODE — raw text as it arrives
-                            // ═════════════════════════════════════
-                            TextEdit {
-                                visible: root.translating
-                                text: root.streamingTranslation !== ""
-                                    ? root.streamingTranslation
-                                    : i18n("Waiting for response…")
-                                textFormat: TextEdit.PlainText
-                                font.pixelSize: root.fontSizeBase
-                                font.family: root.fontFamily || undefined
-                                color: Kirigami.Theme.textColor
-                                wrapMode: TextEdit.WordWrap
-                                Layout.fillWidth: true
-                                readOnly: true
-                                selectByMouse: true
-                                height: contentHeight
+                                // ── Streaming content ──────────────
+                                TextEdit {
+                                    visible: root.streamingTranslation !== ""
+                                    text: root.streamingTranslation
+                                    textFormat: TextEdit.PlainText
+                                    font.pixelSize: root.fontSizeBase
+                                    font.family: root.fontFamily || undefined
+                                    color: Kirigami.Theme.textColor
+                                    wrapMode: TextEdit.WordWrap
+                                    Layout.fillWidth: true
+                                    readOnly: true
+                                    selectByMouse: true
+                                    height: contentHeight
+                                }
                             }
 
                             // ═════════════════════════════════════
@@ -1289,6 +1411,46 @@ PlasmoidItem {
                                     }
                                 }
                             }
+                        }
+
+                        // ── Floating cancel button (streaming) ───
+                        QQC2.Button {
+                            visible: root.translating
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.topMargin: Kirigami.Units.smallSpacing
+                            anchors.rightMargin: Kirigami.Units.smallSpacing
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            icon.name: "dialog-cancel"
+                            flat: true
+                            Accessible.name: i18n("Cancel translation")
+                            QQC2.ToolTip {
+                                text: i18n("Cancel")
+                                delay: Kirigami.Units.toolTipDelay
+                                visible: hovered
+                            }
+                            onClicked: root.cancelTranslation()
+                        }
+
+                        // ── Floating delete button ───────────
+                        QQC2.Button {
+                            visible: !root.translating && root.aiResult !== null
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.topMargin: Kirigami.Units.smallSpacing
+                            anchors.rightMargin: Kirigami.Units.smallSpacing
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            icon.name: "edit-delete"
+                            flat: true
+                            Accessible.name: i18n("Delete this result")
+                            QQC2.ToolTip {
+                                text: i18n("Delete from history")
+                                delay: Kirigami.Units.toolTipDelay
+                                visible: hovered
+                            }
+                            onClicked: root.deleteCurrentResult()
                         }
                     }
 
