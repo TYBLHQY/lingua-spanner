@@ -87,6 +87,47 @@ PlasmoidItem {
     // ── Structured AI result (parsed JSON for display) ──────
     property var aiResult: null
 
+    // ── Flat grid models for column-aligned display ────────
+    readonly property var _flatWordModel: {
+        if (!root.aiResult || !root.aiResult.words) return []
+        var m = []
+        var words = root.aiResult.words
+        for (var i = 0; i < words.length; i++) {
+            m.push({ text: words[i].word || "", bold: true, rich: false, fillWidth: false, color: "" })
+            m.push({ text: words[i].pos || "", bold: false, rich: false, fillWidth: false, color: Kirigami.Theme.neutralTextColor })
+            m.push({ text: root.grayBrackets(words[i].meaning || ""), bold: false, rich: true, fillWidth: true, color: "" })
+        }
+        return m
+    }
+
+    readonly property var _flatFreqModel: {
+        if (!root.aiResult || !root.aiResult.frequently) return []
+        var m = []
+        var freq = root.aiResult.frequently
+        for (var i = 0; i < freq.length; i++) {
+            m.push({ text: freq[i].phrase || "", bold: true, rich: false, fillWidth: false, color: "" })
+            m.push({ text: root.grayBrackets(freq[i].translation || ""), bold: false, rich: true, fillWidth: true, color: "" })
+        }
+        return m
+    }
+
+    readonly property var _flatYoudaoDefModel: {
+        if (!root.youdaoResult || !root.youdaoResult.exp) return []
+        var m = []
+        var exp = root.youdaoResult.exp
+        for (var i = 0; i < exp.length; i++) {
+            var trs = exp[i].tr || []
+            if (trs.length === 0) continue
+            m.push({ role: "po", text: exp[i].po || "" })
+            m.push({ role: "tr", text: root.grayBrackets(trs[0]) })
+            for (var j = 1; j < trs.length; j++) {
+                m.push({ role: "padding", text: "" })
+                m.push({ role: "tr", text: root.grayBrackets(trs[j]) })
+            }
+        }
+        return m
+    }
+
     // ── History cache (DB-backed, used for duplicate detection) ─
     function _getCachedHistory(text) {
         try {
@@ -811,52 +852,54 @@ PlasmoidItem {
                             }
 
                             // ── Definitions (exp) ──────────
-                            Repeater {
-                                model: youdaoResult ? youdaoResult.exp : []
+                            ColumnLayout {
+                                visible: youdaoResult && youdaoResult.exp && youdaoResult.exp.length > 0
+                                Layout.fillWidth: true
+                                spacing: 2
 
-                                delegate: ColumnLayout {
-                                    required property var modelData
+                                GridLayout {
+                                    columns: 2
+                                    columnSpacing: Kirigami.Units.largeSpacing
+                                    rowSpacing: Kirigami.Units.smallSpacing
                                     Layout.fillWidth: true
-                                    spacing: Kirigami.Units.smallSpacing
 
-                                    // Part of speech label
+                                    // Headers
                                     PlasmaComponents3.Label {
-                                        visible: modelData.po.length > 0
-                                        text: modelData.po
+                                        text: i18n("词性")
                                         font.bold: true
-                                        color: Kirigami.Theme.neutralTextColor
-                                        font.pixelSize: root.fontSizeBase
+                                        font.pixelSize: root.fontSizeSmall
+                                        color: Kirigami.Theme.disabledTextColor
+                                    }
+                                    PlasmaComponents3.Label {
+                                        text: i18n("释义")
+                                        font.bold: true
+                                        font.pixelSize: root.fontSizeSmall
+                                        color: Kirigami.Theme.disabledTextColor
                                     }
 
+                                    // Separator
+                                    Rectangle {
+                                        Layout.columnSpan: 2
+                                        Layout.fillWidth: true
+                                        height: 1
+                                        color: Kirigami.Theme.disabledTextColor
+                                        opacity: 0.2
+                                    }
 
-                                    // Translations
+                                    // Data cells
                                     Repeater {
-                                        model: modelData.tr
+                                        model: root._flatYoudaoDefModel
 
-                                        delegate: Rectangle {
-                                            required property string modelData
-                                            Layout.fillWidth: true
-                                            Layout.leftMargin: Kirigami.Units.smallSpacing
-                                            color: Kirigami.Theme.backgroundColor
-                                            radius: Kirigami.Units.smallSpacing
-                                            implicitHeight: trEdit.height + Kirigami.Units.smallSpacing
-
-                                            TextEdit {
-                                                id: trEdit
-                                                anchors {
-                                                    left: parent.left
-                                                    right: parent.right
-                                                    margins: Kirigami.Units.smallSpacing
-                                                }
-                                                text: root.grayBrackets(modelData)
-                                                textFormat: TextEdit.RichText
-                                                wrapMode: TextEdit.WordWrap
-                                                font.pixelSize: root.fontSizeSecondary
-                                                font.family: root.fontFamily || undefined
-                                                readOnly: true
-                                                selectByMouse: true
-                                                height: contentHeight
-                                            }
+                                        delegate: PlasmaComponents3.Label {
+                                            text: modelData.role === "padding" ? "" : modelData.text
+                                            font.bold: modelData.role === "po"
+                                            font.pixelSize: modelData.role === "po" ? root.fontSizeSmall : root.fontSizeBase
+                                            font.family: root.fontFamily || undefined
+                                            color: modelData.role === "po" ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.textColor
+                                            textFormat: modelData.role === "tr" ? Text.StyledText : Text.PlainText
+                                            wrapMode: modelData.role === "tr" ? Text.WordWrap : Text.NoWrap
+                                            Layout.fillWidth: modelData.role === "tr"
+                                            Layout.alignment: modelData.role === "po" ? Qt.AlignTop : Qt.AlignVCenter
                                         }
                                     }
                                 }
@@ -1008,6 +1051,7 @@ PlasmoidItem {
                                                 wrapMode: TextEdit.WordWrap
                                                 font.pixelSize: root.fontSizeSecondary
                                                 font.family: root.fontFamily || undefined
+                                                color: Kirigami.Theme.textColor
                                                 readOnly: true
                                                 selectByMouse: true
                                                 height: contentHeight
@@ -1068,11 +1112,12 @@ PlasmoidItem {
                             TextEdit {
                                 visible: root.translating
                                 text: root.streamingTranslation !== ""
-                                    ? root.grayBrackets(root.streamingTranslation)
+                                    ? root.streamingTranslation
                                     : i18n("Waiting for response…")
-                                textFormat: TextEdit.RichText
+                                textFormat: TextEdit.PlainText
                                 font.pixelSize: root.fontSizeBase
                                 font.family: root.fontFamily || undefined
+                                color: Kirigami.Theme.textColor
                                 wrapMode: TextEdit.WordWrap
                                 Layout.fillWidth: true
                                 readOnly: true
@@ -1090,7 +1135,7 @@ PlasmoidItem {
 
                                 // ── Translation ──────────────
                                 PlasmaComponents3.Label {
-                                    text: i18n("翻译")
+                                    text: i18n("Translation")
                                     font.bold: true
                                     font.pixelSize: root.fontSizeSmall
                                     color: Kirigami.Theme.neutralTextColor
@@ -1102,6 +1147,7 @@ PlasmoidItem {
                                     textFormat: TextEdit.RichText
                                     font.pixelSize: root.fontSizeLarge
                                     font.family: root.fontFamily || undefined
+                                    color: Kirigami.Theme.textColor
                                     wrapMode: TextEdit.WordWrap
                                     Layout.fillWidth: true
                                     readOnly: true
@@ -1116,7 +1162,7 @@ PlasmoidItem {
                                     spacing: 2
 
                                     PlasmaComponents3.Label {
-                                        text: i18n("词汇分析")
+                                        text: i18n("Word Analysis")
                                         font.bold: true
                                         font.pixelSize: root.fontSizeSmall
                                         color: Kirigami.Theme.neutralTextColor
@@ -1125,36 +1171,55 @@ PlasmoidItem {
                                         Layout.bottomMargin: Kirigami.Units.smallSpacing
                                     }
 
-                                    Repeater {
-                                        model: root.aiResult ? root.aiResult.words : []
+                                    GridLayout {
+                                        columns: 3
+                                        columnSpacing: Kirigami.Units.largeSpacing
+                                        rowSpacing: Kirigami.Units.smallSpacing
+                                        Layout.fillWidth: true
 
-                                        delegate: RowLayout {
-                                            required property var modelData
+                                        // Headers
+                                        PlasmaComponents3.Label {
+                                            text: i18n("Word")
+                                            font.bold: true
+                                            font.pixelSize: root.fontSizeSmall
+                                            color: Kirigami.Theme.disabledTextColor
+                                        }
+                                        PlasmaComponents3.Label {
+                                            text: i18n("POS")
+                                            font.bold: true
+                                            font.pixelSize: root.fontSizeSmall
+                                            color: Kirigami.Theme.disabledTextColor
+                                        }
+                                        PlasmaComponents3.Label {
+                                            text: i18n("Meaning")
+                                            font.bold: true
+                                            font.pixelSize: root.fontSizeSmall
+                                            color: Kirigami.Theme.disabledTextColor
+                                        }
+
+                                        // Separator
+                                        Rectangle {
+                                            Layout.columnSpan: 3
                                             Layout.fillWidth: true
-                                            spacing: Kirigami.Units.smallSpacing
+                                            height: 1
+                                            color: Kirigami.Theme.disabledTextColor
+                                            opacity: 0.2
+                                        }
 
-                                            PlasmaComponents3.Label {
-                                                text: modelData.word || ""
-                                                font.bold: true
-                                                font.pixelSize: root.fontSizeBase
-                                            }
+                                        // Data cells
+                                        Repeater {
+                                            model: root._flatWordModel
 
-                                            PlasmaComponents3.Label {
-                                                text: modelData.pos || ""
-                                                font.pixelSize: root.fontSizeSmall
-                                                color: Kirigami.Theme.neutralTextColor
-                                            }
-
-                                            TextEdit {
-                                                text: root.grayBrackets(modelData.meaning || "")
-                                                textFormat: TextEdit.RichText
+                                            delegate: Text {
+                                                required property var modelData
+                                                text: modelData.text
+                                                font.bold: modelData.bold || false
                                                 font.pixelSize: root.fontSizeBase
                                                 font.family: root.fontFamily || undefined
-                                                wrapMode: TextEdit.WordWrap
-                                                Layout.fillWidth: true
-                                                readOnly: true
-                                                selectByMouse: true
-                                                height: contentHeight
+                                                color: modelData.color || Kirigami.Theme.textColor
+                                                textFormat: modelData.rich ? Text.StyledText : Text.PlainText
+                                                wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
+                                                Layout.fillWidth: modelData.fillWidth || false
                                             }
                                         }
                                     }
@@ -1167,7 +1232,7 @@ PlasmoidItem {
                                     spacing: 2
 
                                     PlasmaComponents3.Label {
-                                        text: i18n("常用搭配")
+                                        text: i18n("Collocations")
                                         font.bold: true
                                         font.pixelSize: root.fontSizeSmall
                                         color: Kirigami.Theme.neutralTextColor
@@ -1176,31 +1241,49 @@ PlasmoidItem {
                                         Layout.bottomMargin: Kirigami.Units.smallSpacing
                                     }
 
-                                    Repeater {
-                                        model: root.aiResult ? root.aiResult.frequently : []
+                                    GridLayout {
+                                        columns: 2
+                                        columnSpacing: Kirigami.Units.largeSpacing
+                                        rowSpacing: Kirigami.Units.smallSpacing
+                                        Layout.fillWidth: true
 
-                                        delegate: RowLayout {
-                                            required property var modelData
+                                        // Headers
+                                        PlasmaComponents3.Label {
+                                            text: i18n("Phrase")
+                                            font.bold: true
+                                            font.pixelSize: root.fontSizeSmall
+                                            color: Kirigami.Theme.disabledTextColor
+                                        }
+                                        PlasmaComponents3.Label {
+                                            text: i18n("Translation")
+                                            font.bold: true
+                                            font.pixelSize: root.fontSizeSmall
+                                            color: Kirigami.Theme.disabledTextColor
+                                        }
+
+                                        // Separator
+                                        Rectangle {
+                                            Layout.columnSpan: 2
                                             Layout.fillWidth: true
-                                            spacing: Kirigami.Units.smallSpacing
+                                            height: 1
+                                            color: Kirigami.Theme.disabledTextColor
+                                            opacity: 0.2
+                                        }
 
-                                            PlasmaComponents3.Label {
-                                                text: modelData.phrase || ""
+                                        // Data cells
+                                        Repeater {
+                                            model: root._flatFreqModel
+
+                                            delegate: Text {
+                                                required property var modelData
+                                                text: modelData.text
+                                                font.bold: modelData.bold || false
                                                 font.pixelSize: root.fontSizeBase
                                                 font.family: root.fontFamily || undefined
-                                                font.bold: true
-                                            }
-
-                                            TextEdit {
-                                                text: root.grayBrackets(modelData.translation || "")
-                                                textFormat: TextEdit.RichText
-                                                font.pixelSize: root.fontSizeBase
-                                                font.family: root.fontFamily || undefined
-                                                wrapMode: TextEdit.WordWrap
-                                                Layout.fillWidth: true
-                                                readOnly: true
-                                                selectByMouse: true
-                                                height: contentHeight
+                                                color: modelData.color || Kirigami.Theme.textColor
+                                                textFormat: modelData.rich ? Text.StyledText : Text.PlainText
+                                                wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
+                                                Layout.fillWidth: modelData.fillWidth || false
                                             }
                                         }
                                     }
