@@ -42,8 +42,6 @@ PlasmoidItem {
     // -- Language pair (AI modes only) -------------------------
     property string sourceLang: "auto"
     property string targetLang: "auto"
-    property string firstLanguage: Plasmoid.configuration.firstLanguage || "zh"
-    property string secondLanguage: Plasmoid.configuration.secondLanguage || "en"
 
     readonly property var _langModel: [
         { text: i18n("Auto Detect"),  value: "auto" },
@@ -120,9 +118,9 @@ PlasmoidItem {
     // ── PasteSelectionHelper (reads PRIMARY via QClipboard) ─
     PasteSelectionHelper { id: pasteSelectionHelper }
 
-    // ── Language pair persistence ────────────────────────────
-    // Each save-merges into the existing JSON so one field change
-    // never accidentally overwrites others with default values.
+    // ── Current mode persistence ────────────────────────────
+    // Persists through ProcessHelper's separate config so mode
+    // choice survives across sessions independently of KConfig.
     function _saveUiConfig(obj) {
         try {
             var existing = JSON.parse(pasteSelectionHelper.proc.loadConfig() || "{}")
@@ -142,7 +140,7 @@ PlasmoidItem {
             if (cfg.currentMode && cfg.currentMode !== root.currentMode)
                 root.currentMode = cfg.currentMode
 
-            // Sync combo indices after loading (they init'ed with defaults)
+            // Sync mode combo after loading (it init'ed with defaults)
             Qt.callLater(function() {
                 // mode combo
                 for (var i = 0; i < modeCombo.model.length; i++)
@@ -566,6 +564,7 @@ PlasmoidItem {
                     }
                 }
             }
+
             // -- Language bar (AI modes only) -------------------------
             Item {
                 visible: root.currentMode === "deepseek" || root.currentMode === "siliconflow"
@@ -660,7 +659,6 @@ PlasmoidItem {
                     }
                 }
             }
-
 
             // ════════════════════════════════════════════════
             //  Results area

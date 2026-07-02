@@ -59,17 +59,5 @@
     <entry name="fontSizeBase" type="Int">
       <default>14</default>
     </entry>
-    <entry name="sourceLang" type="String">
-      <default>auto</default>
-    </entry>
-    <entry name="targetLang" type="String">
-      <default>auto</default>
-    </entry>
-    <entry name="firstLanguage" type="String">
-      <default>zh</default>
-    </entry>
-    <entry name="secondLanguage" type="String">
-      <default>en</default>
-    </entry>
   </group>
 </kcfg>

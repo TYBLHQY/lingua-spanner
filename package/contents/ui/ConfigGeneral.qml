@@ -49,20 +49,6 @@ KCMUtils.SimpleKCM {
     property alias cfg_fontSizeBase: fontSizeSpin.value
     property int cfg_fontSizeBaseDefault: 14
 
-    property string cfg_firstLanguage: "zh"
-    property string cfg_firstLanguageDefault: "zh"
-    property string cfg_secondLanguage: "en"
-    property string cfg_secondLanguageDefault: "en"
-
-    readonly property var _cfgLangModel: [
-        { text: "简体中文", value: "zh" },
-        { text: "English",  value: "en" },
-        { text: "Deutsch",  value: "de" },
-        { text: "日本語",    value: "ja" },
-        { text: "Français", value: "fr" },
-        { text: "Español",  value: "es" }
-    ]
-
     // ── Helper: persist/restore model lists as JSON strings ──
     function parseModelList(json, fallback) {
         if (!json) return fallback
@@ -546,64 +532,6 @@ KCMUtils.SimpleKCM {
                 Layout.topMargin: Kirigami.Units.smallSpacing
             }
         }
-        // -- Language Pair -------------------------
-        Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
-
-        Kirigami.Heading {
-            level: 3
-            text: i18n("Language Pair")
-            Layout.fillWidth: true
-            Layout.topMargin: Kirigami.Units.smallSpacing
-        }
-
-        GridLayout {
-            columns: 2
-            Layout.fillWidth: true
-            rowSpacing: Kirigami.Units.smallSpacing
-            columnSpacing: Kirigami.Units.largeSpacing
-
-            PlasmaComponents3.Label {
-                text: i18n("First Language:")
-            }
-            QQC2.ComboBox {
-                id: firstLangCombo
-                model: page._cfgLangModel
-                textRole: "text"
-                valueRole: "value"
-                Layout.fillWidth: true
-
-                Component.onCompleted: {
-                    for (var i = 0; i < model.length; i++)
-                        if (model[i].value === page.cfg_firstLanguage) {
-                            currentIndex = i
-                            break
-                        }
-                }
-                onCurrentValueChanged: page.cfg_firstLanguage = currentValue
-            }
-
-            PlasmaComponents3.Label {
-                text: i18n("Second Language:")
-            }
-            QQC2.ComboBox {
-                id: secondLangCombo
-                model: page._cfgLangModel
-                textRole: "text"
-                valueRole: "value"
-                Layout.fillWidth: true
-
-                Component.onCompleted: {
-                    for (var i = 0; i < model.length; i++)
-                        if (model[i].value === page.cfg_secondLanguage) {
-                            currentIndex = i
-                            break
-                        }
-                }
-                onCurrentValueChanged: page.cfg_secondLanguage = currentValue
-            }
-        }
-
-
         // ── Display settings ───────────────────────────
         Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
 
