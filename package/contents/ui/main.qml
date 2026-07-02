@@ -75,7 +75,6 @@ PlasmoidItem {
     // ── Translation state ───────────────────────────────────
     property string inputText: ""
     property var youdaoResult: null
-    property var deepseekResult: null
     property var dictionaryResult: null
     property bool translating: false
     property string errorMessage: ""
@@ -157,6 +156,21 @@ PlasmoidItem {
             }
         } catch (e) {}
         return null
+    }
+
+    // ── Shared cache-hit apply ───────────────────────────────
+    // Both DeepSeek and SiliconFlow use the same logic when a
+    // cached result is found.
+    function _applyCachedResult(cached) {
+        pasteSelectionHelper.proc.exec(
+            "UPDATE translations SET created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
+            JSON.stringify([cached.id])
+        )
+        streamingInput = root.inputText
+        streamingTranslation = cached.translation
+        root.aiResult = cached.result
+        root.currentTranslationId = cached.id
+        translating = false
     }
 
     // ── UUID generator ──────────────────────────────────────
@@ -339,7 +353,6 @@ PlasmoidItem {
         translating = true
         errorMessage = ""
         youdaoResult = null
-        deepseekResult = null
         dictionaryResult = null
         root.aiResult = null
         root.currentTranslationId = ""
@@ -365,15 +378,7 @@ PlasmoidItem {
             // siliconflow — check history cache first
             var cached = _getCachedHistory(inputText, root.sourceLang, root.targetLang)
             if (cached) {
-                pasteSelectionHelper.proc.exec(
-                    "UPDATE translations SET created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
-                    JSON.stringify([cached.id])
-                )
-                streamingInput = root.inputText
-                streamingTranslation = cached.translation
-                root.aiResult = cached.result
-                root.currentTranslationId = cached.id
-                translating = false
+                root._applyCachedResult(cached)
             } else if (!siliconFlowApiKey) {
                 errorMessage = i18n("SiliconFlow API key not configured")
                 translating = false
@@ -385,16 +390,7 @@ PlasmoidItem {
             // deepseek — check history cache first
             var cached = _getCachedHistory(inputText, root.sourceLang, root.targetLang)
             if (cached) {
-                // Found in history: display from cache, no API call
-                pasteSelectionHelper.proc.exec(
-                    "UPDATE translations SET created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
-                    JSON.stringify([cached.id])
-                )
-                streamingInput = root.inputText
-                streamingTranslation = cached.translation
-                root.aiResult = cached.result
-                root.currentTranslationId = cached.id
-                translating = false
+                root._applyCachedResult(cached)
             } else if (!deepseekApiKey) {
                 errorMessage = i18n("DeepSeek API key not configured")
                 translating = false
@@ -701,7 +697,6 @@ PlasmoidItem {
                             if (currentValue !== root.currentMode) {
                                 // Clear results
                                 youdaoResult = null
-                                deepseekResult = null
                                 dictionaryResult = null
                                 // Write to local state
                                 root.currentMode = currentValue

@@ -5,9 +5,6 @@
         http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
   <group name="General">
-    <entry name="translateMode" type="String">
-      <default>youdao</default>
-    </entry>
     <entry name="deepseekApiKey" type="String">
       <default></default>
     </entry>
@@ -46,9 +43,6 @@
     </entry>
     <entry name="shortcutPick" type="String">
       <default>Meta+2</default>
-    </entry>
-    <entry name="history" type="String">
-      <default>[]</default>
     </entry>
     <entry name="modeOrder" type="String">
       <default>["youdao","deepseek","siliconflow","dictionary"]</default>

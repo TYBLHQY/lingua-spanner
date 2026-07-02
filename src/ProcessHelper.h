@@ -3,8 +3,8 @@
 // Tracks selection change timestamps for freshness checks.
 // Provides SQLite CRUD for query result persistence.
 
-#ifndef PROCESHELPER_H
-#define PROCESHELPER_H
+#ifndef PROCESSHELPER_H
+#define PROCESSHELPER_H
 
 #include <QObject>
 #include <QtQml>

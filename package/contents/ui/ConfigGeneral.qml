@@ -10,8 +10,6 @@ KCMUtils.SimpleKCM {
     id: page
 
     // ── KConfig XT bindings ───────────────────────────────────
-    property string cfg_translateMode: "youdao"
-    property string cfg_translateModeDefault: "youdao"
     property alias cfg_deepseekApiKey: apiKeyField.text
     property string cfg_deepseekApiKeyDefault: ""
     property string cfg_deepseekModel: "deepseek-v4-flash"
