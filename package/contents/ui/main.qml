@@ -1029,55 +1029,31 @@ PlasmoidItem {
                             }
                             spacing: Kirigami.Units.smallSpacing
 
-                            // ── Header row ──────────────────────────
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: Kirigami.Units.smallSpacing
-
-                                PlasmaComponents3.Label {
-                                    text: root.translating ? i18n("STREAMING") : (root._modeLabels[root.currentMode] || root.currentMode)
-                                    font.bold: true
-                                    font.pixelSize: root.fontSizeSmall
-                                    color: root.translating ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.textColor
-                                }
-
-                                Item { Layout.fillWidth: true }
-
-                                // ── Loading dots (only while streaming) ──
-                                Row {
-                                    visible: root.translating
-                                    spacing: 3
-                                    Repeater {
-                                        model: 3
-                                        delegate: Rectangle {
-                                            width: 5; height: 5
-                                            radius: 2.5
-                                            color: Kirigami.Theme.highlightColor
-                                            opacity: 0.3
-                                            SequentialAnimation on opacity {
-                                                loops: Animation.Infinite
-                                                running: root.translating
-                                                PauseAnimation { duration: 200 * index }
-                                                NumberAnimation {
-                                                    from: 0.3; to: 1.0; duration: 400; easing.type: Easing.InOutQuad
-                                                }
-                                                NumberAnimation {
-                                                    from: 1.0; to: 0.3; duration: 400; easing.type: Easing.InOutQuad
-                                                }
+                            // ── Loading dots (streaming only) ─────────
+                            Row {
+                                visible: root.translating
+                                Layout.alignment: Qt.AlignRight
+                                spacing: 3
+                                Repeater {
+                                    model: 3
+                                    delegate: Rectangle {
+                                        width: 5; height: 5
+                                        radius: 2.5
+                                        color: Kirigami.Theme.highlightColor
+                                        opacity: 0.3
+                                        SequentialAnimation on opacity {
+                                            loops: Animation.Infinite
+                                            running: root.translating
+                                            PauseAnimation { duration: 200 * index }
+                                            NumberAnimation {
+                                                from: 0.3; to: 1.0; duration: 400; easing.type: Easing.InOutQuad
+                                            }
+                                            NumberAnimation {
+                                                from: 1.0; to: 0.3; duration: 400; easing.type: Easing.InOutQuad
                                             }
                                         }
                                     }
                                 }
-                            }
-
-                            // ── Input text ──────────────────────────
-                            PlasmaComponents3.Label {
-                                text: root.streamingInput
-                                font.pixelSize: root.fontSizeSecondary
-                                color: Kirigami.Theme.neutralTextColor
-                                wrapMode: Text.WordWrap
-                                Layout.fillWidth: true
-                                visible: root.streamingInput.length > 0
                             }
 
                             // ═════════════════════════════════════
@@ -1127,7 +1103,7 @@ PlasmoidItem {
                                 ColumnLayout {
                                     visible: root.aiResult && root.aiResult.words && root.aiResult.words.length > 0
                                     Layout.fillWidth: true
-                                    spacing: Kirigami.Units.smallSpacing
+                                    spacing: 2
 
                                     Rectangle {
                                         Layout.fillWidth: true; height: 1
@@ -1139,6 +1115,8 @@ PlasmoidItem {
                                         font.bold: true
                                         font.pixelSize: root.fontSizeSmall
                                         color: Kirigami.Theme.neutralTextColor
+                                        Layout.topMargin: Kirigami.Units.smallSpacing
+                                        Layout.bottomMargin: Kirigami.Units.smallSpacing
                                     }
 
                                     Repeater {
@@ -1153,14 +1131,16 @@ PlasmoidItem {
                                                 text: modelData.word || ""
                                                 font.bold: true
                                                 font.pixelSize: root.fontSizeBase
-                                                Layout.minimumWidth: 80
+                                                Layout.preferredWidth: 100
+                                                Layout.maximumWidth: 100
                                             }
 
                                             PlasmaComponents3.Label {
                                                 text: modelData.pos || ""
                                                 font.pixelSize: root.fontSizeSmall
                                                 color: Kirigami.Theme.neutralTextColor
-                                                Layout.minimumWidth: 50
+                                                Layout.preferredWidth: 60
+                                                Layout.maximumWidth: 60
                                             }
 
                                             TextEdit {
@@ -1181,7 +1161,7 @@ PlasmoidItem {
                                 ColumnLayout {
                                     visible: root.aiResult && root.aiResult.frequently && root.aiResult.frequently.length > 0
                                     Layout.fillWidth: true
-                                    spacing: Kirigami.Units.smallSpacing
+                                    spacing: 2
 
                                     Rectangle {
                                         Layout.fillWidth: true; height: 1
@@ -1193,6 +1173,8 @@ PlasmoidItem {
                                         font.bold: true
                                         font.pixelSize: root.fontSizeSmall
                                         color: Kirigami.Theme.neutralTextColor
+                                        Layout.topMargin: Kirigami.Units.smallSpacing
+                                        Layout.bottomMargin: Kirigami.Units.smallSpacing
                                     }
 
                                     Repeater {
@@ -1207,7 +1189,8 @@ PlasmoidItem {
                                                 text: modelData.phrase || ""
                                                 font.pixelSize: root.fontSizeBase
                                                 font.italic: true
-                                                Layout.minimumWidth: 120
+                                                Layout.preferredWidth: 150
+                                                Layout.maximumWidth: 150
                                             }
 
                                             TextEdit {
@@ -1223,15 +1206,6 @@ PlasmoidItem {
                                         }
                                     }
                                 }
-                            }
-                        }
-                    }
-                                wrapMode: TextEdit.WordWrap
-                                Layout.fillWidth: true
-                                readOnly: true
-                                selectByMouse: true
-                                height: contentHeight
-                                visible: text.length > 0
                             }
                         }
                     }
