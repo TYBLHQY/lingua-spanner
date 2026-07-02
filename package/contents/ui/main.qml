@@ -332,8 +332,6 @@ PlasmoidItem {
         }
         onFinished: function(result) {
             translating = false
-            streamingTranslation = ""
-            streamingInput = ""
             if (result.translation) {
                 root._insertTranslation("deepseek", result)
             }
@@ -367,8 +365,6 @@ PlasmoidItem {
         }
         onFinished: function(result) {
             translating = false
-            streamingTranslation = ""
-            streamingInput = ""
             if (result.translation) {
                 root._insertTranslation("siliconflow", result)
             }
@@ -1025,16 +1021,17 @@ PlasmoidItem {
                                 spacing: Kirigami.Units.smallSpacing
 
                                 PlasmaComponents3.Label {
-                                    text: i18n("STREAMING")
+                                    text: root.translating ? i18n("STREAMING") : (root._modeLabels[root.currentMode] || root.currentMode)
                                     font.bold: true
                                     font.pixelSize: root.fontSizeSmall
-                                    color: Kirigami.Theme.neutralTextColor
+                                    color: root.translating ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.textColor
                                 }
 
                                 Item { Layout.fillWidth: true }
 
-                                // ── 流式动画圆点 ──
+                                // ── 流式动画圆点 (仅翻译中显示) ──
                                 Row {
+                                    visible: root.translating
                                     spacing: 3
                                     Repeater {
                                         model: 3
@@ -1045,7 +1042,7 @@ PlasmoidItem {
                                             opacity: 0.3
                                             SequentialAnimation on opacity {
                                                 loops: Animation.Infinite
-                                                running: root.translating && root.streamingInput !== ""
+                                                running: root.translating
 
                                                 PauseAnimation { duration: 200 * index }
 
@@ -1071,10 +1068,17 @@ PlasmoidItem {
                                 color: Kirigami.Theme.neutralTextColor
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                visible: root.streamingInput.length > 0
                             }
 
                             TextEdit {
-                                text: root.streamingTranslation !== "" ? root.grayBrackets(root.streamingTranslation) : i18n("Waiting for response…")
+                                text: {
+                                    if (root.streamingTranslation !== "")
+                                        return root.grayBrackets(root.streamingTranslation)
+                                    if (root.translating)
+                                        return i18n("Waiting for response…")
+                                    return ""
+                                }
                                 textFormat: TextEdit.RichText
                                 font.pixelSize: root.fontSizeBase
                                 wrapMode: TextEdit.WordWrap
@@ -1082,6 +1086,7 @@ PlasmoidItem {
                                 readOnly: true
                                 selectByMouse: true
                                 height: contentHeight
+                                visible: text.length > 0
                             }
                         }
                     }
