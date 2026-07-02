@@ -1,4 +1,4 @@
-// ── Paste Selection Helper ──────────────────────────────────
+// Paste Selection Helper
 // Reads PRIMARY selection text from the focused window.
 // Uses the C++ ProcessHelper (LinguaSpannerHelper) which reads
 // PRIMARY selection directly via QClipboard — no external tool needed.

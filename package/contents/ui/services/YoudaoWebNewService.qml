@@ -1,4 +1,4 @@
-// ── Youdao Web New Service ─────────────────────────────────
+// Youdao Web New Service
 // Scrapes dict.youdao.com for word definitions
 // Reference: youdao-web-new-scraping-rules.md
 

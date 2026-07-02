@@ -1,6 +1,5 @@
-// ── ProcessHelper Unit Tests ──────────────────────────────
+// ProcessHelper Unit Tests
 // Run: qml6 -I ../package/contents/lib tst_ProcessHelper.qml
-//
 // Each test uses a fresh ProcessHelper via a dedicated property.
 // QML_ELEMENT types cannot be created with `var ph = ProcessHelper {}`
 // inside JS — they must be declared as QML properties.
@@ -10,7 +9,7 @@ import QtTest
 import LinguaSpannerHelper
 
 Item {
-    // ── Shared for all tests (reused across test functions) ──
+    // Shared for all tests (reused across test functions)
     property ProcessHelper ph1: ProcessHelper {}
     property ProcessHelper ph2: ProcessHelper {}
     property ProcessHelper ph3: ProcessHelper {}
@@ -39,7 +38,7 @@ Item {
             compare(typeof ph2.readPrimarySelection(), "string")
         }
 
-        // ── SQLite CRUD (each function calls initDb; QTest runs alphabetically) ──
+        // SQLite CRUD (each function calls initDb; QTest runs alphabetically)
 
         function test_delete() {
             ph2.initDb()

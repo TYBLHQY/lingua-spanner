@@ -1,4 +1,4 @@
-// ── Process Helper — QClipboard PRIMARY selection + SQLite ──
+// Process Helper — QClipboard PRIMARY selection + SQLite
 // Reads PRIMARY selection via QClipboard, no external xclip needed.
 // Tracks selection change timestamps for freshness checks.
 // Provides SQLite CRUD for query result persistence.
@@ -29,7 +29,7 @@ public:
     /// Last PRIMARY selection change timestamp (ms since epoch).
     qint64 selectionTimestamp() const { return m_selectionTimestamp; }
 
-    // ── SQLite ────────────────────────────────────────────────
+    // SQLite
     /// Open/create ~/.config/linguaspanner/linguaspanner.db and ensure schema.
     Q_INVOKABLE void initDb();
 
@@ -40,7 +40,7 @@ public:
     /// Close the database connection.
     Q_INVOKABLE void closeDb();
 
-    // ── Config persistence (JSON to ~/.config/linguaspanner/linguaspanner.json) ─
+    // Config persistence (JSON to ~/.config/linguaspanner/linguaspanner.json)
     /// Write entire config JSON object string to file. Empty string deletes the file.
     Q_INVOKABLE void saveConfig(const QString &json);
 

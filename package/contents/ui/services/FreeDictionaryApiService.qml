@@ -1,4 +1,4 @@
-// ── Free Dictionary API Service ─────────────────────────────
+// Free Dictionary API Service
 // Calls https://api.dictionaryapi.dev/api/v2/entries/en/<word>
 // Provides English dictionary definitions (no API key needed)
 
@@ -76,7 +76,7 @@ QtObject {
 
         var entry = data[0]
 
-        // ── Build exp (definitions grouped by part of speech) ──
+        // Build exp (definitions grouped by part of speech)
         var exp = []
         var meanings = entry.meanings || []
         for (var m = 0; m < meanings.length; m++) {
@@ -100,7 +100,7 @@ QtObject {
             })
         }
 
-        // ── Build audio ────────────────────────────────────────
+        // Build audio
         var audio = []
         var phonetics = entry.phonetics || []
         // Dedup by URL
@@ -120,7 +120,7 @@ QtObject {
             })
         }
 
-        // ── Phonetic text ──────────────────────────────────
+        // Phonetic text
         var phonetic = ""
         if (entry.phonetic) {
             phonetic = entry.phonetic

@@ -9,7 +9,7 @@ import org.kde.plasma.components as PlasmaComponents3
 KCMUtils.SimpleKCM {
     id: page
 
-    // ── KConfig XT bindings ───────────────────────────────────
+    // KConfig XT bindings
     property alias cfg_deepseekApiKey: apiKeyField.text
     property string cfg_deepseekApiKeyDefault: ""
     property string cfg_deepseekModel: "deepseek-v4-flash"
@@ -33,7 +33,7 @@ KCMUtils.SimpleKCM {
     property alias cfg_siliconFlowStream: sfStream.checked
     property bool cfg_siliconFlowStreamDefault: true
 
-    // ── Mode list config (JSON arrays) ────────────────────
+    // Mode list config (JSON arrays)
     property string cfg_modeOrder: '["youdao","deepseek","siliconflow","dictionary"]'
     property string cfg_modeOrderDefault: '["youdao","deepseek","siliconflow","dictionary"]'
     property string cfg_modeEnabled: '["youdao","deepseek","siliconflow","dictionary"]'
@@ -50,7 +50,7 @@ KCMUtils.SimpleKCM {
     property string cfg_fontFamily: ""
     property string cfg_fontFamilyDefault: ""
 
-    // ── Helper: persist/restore model lists as JSON strings ──
+    // Helper: persist/restore model lists as JSON strings
     function parseModelList(json, fallback) {
         if (!json) return fallback
         try {
@@ -62,7 +62,7 @@ KCMUtils.SimpleKCM {
         return JSON.stringify(arr)
     }
 
-    // ── Mode list data ────────────────────────────────────
+    // Mode list data
     readonly property var _modeMeta: [
         {id: "youdao",     label: i18n("Youdao")},
         {id: "deepseek",   label: i18n("DeepSeek")},
@@ -106,11 +106,11 @@ KCMUtils.SimpleKCM {
         _saveEnabled()
     }
 
-    // ── UI ────────────────────────────────────────────────────
+    // UI
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
 
-        // ── Mode list ────────────────────────────────
+        // Mode list
         Kirigami.Heading {
             level: 3
             text: i18n("Translation Modes")
@@ -180,7 +180,7 @@ KCMUtils.SimpleKCM {
 
         Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
 
-        // ── DeepSeek settings ────────────────────────────────
+        // DeepSeek settings
         Kirigami.Heading {
             level: 3
             text: i18n("DeepSeek API")
@@ -395,7 +395,7 @@ KCMUtils.SimpleKCM {
 
         Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
 
-        // ── SiliconFlow settings ─────────────────────────
+        // SiliconFlow settings
         Kirigami.Heading {
             level: 3
             text: i18n("SiliconFlow API")
@@ -533,7 +533,7 @@ KCMUtils.SimpleKCM {
                 Layout.topMargin: Kirigami.Units.smallSpacing
             }
         }
-        // ── Display settings ───────────────────────────
+        // Display settings
         Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
 
         Kirigami.Heading {
@@ -611,7 +611,7 @@ KCMUtils.SimpleKCM {
             }
         }
 
-        // ── Security note ────────────────────────────────────
+        // Security note
         Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
 
         PlasmaComponents3.Label {

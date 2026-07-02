@@ -8,10 +8,10 @@ import org.kde.plasma.components as PlasmaComponents3
 import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
 
-// ── Custom QML plugin (QClipboard PRIMARY selection) ──────
+// Custom QML plugin (QClipboard PRIMARY selection)
 import "../lib/LinguaSpannerHelper"
 
-// ── Translation services ───────────────────────────────────
+// Translation services
 import "services" as Services
 
 PlasmoidItem {
@@ -20,7 +20,7 @@ PlasmoidItem {
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     hideOnWindowDeactivate: true
 
-    // ── Config shortcuts ────────────────────────────────────
+    // Config shortcuts
     readonly property var _modeOrder: JSON.parse(Plasmoid.configuration.modeOrder || '["youdao","deepseek","siliconflow","dictionary"]')
     readonly property var _modeEnabled: JSON.parse(Plasmoid.configuration.modeEnabled || '["youdao","deepseek","siliconflow","dictionary"]')
     readonly property string deepseekApiKey: Plasmoid.configuration.deepseekApiKey || ""
@@ -33,21 +33,20 @@ PlasmoidItem {
     readonly property string siliconFlowModel: Plasmoid.configuration.siliconFlowModel || "deepseek-ai/DeepSeek-V4-Flash"
     readonly property bool siliconFlowStream: Plasmoid.configuration.siliconFlowStream !== undefined ? Plasmoid.configuration.siliconFlowStream : true
 
-    // ── Font sizes (from config) ────────────────────────────
+    // Font sizes (from config)
     readonly property int fontSizeBase: Plasmoid.configuration.fontSizeBase || 14
     readonly property int fontSizeLarge: fontSizeBase + 1
     readonly property int fontSizeSmall: Math.max(6, fontSizeBase - 2)
     readonly property int fontSizeSecondary: Math.max(6, fontSizeBase - 1)
 
-    // ── Custom font family (empty = system default) ─────────
+    // Custom font family (empty = system default)
     readonly property string fontFamily: Plasmoid.configuration.fontFamily || ""
 
-    // -- Language pair (AI modes only) -------------------------
+    // Language pair (AI modes only)
     property string sourceLang: "auto"
     property string targetLang: "auto"
 
     readonly property var _langModel: [
-        { text: i18n("Auto Detect"),  value: "auto" },
         { text: "简体中文",            value: "zh" },
         { text: "English",            value: "en" },
         { text: "Deutsch",            value: "de" },
@@ -56,7 +55,7 @@ PlasmoidItem {
         { text: "Español",            value: "es" }
     ]
 
-    // ── Mode label lookup ───────────────────────────────────
+    // Mode label lookup
     readonly property var _modeLabels: ({
         "youdao":      i18n("Youdao"),
         "deepseek":    i18n("DeepSeek"),
@@ -64,7 +63,7 @@ PlasmoidItem {
         "dictionary":  i18n("Free Dictionary API")
     })
 
-    // ── Currently selected mode (from ComboBox) ──────────────
+    // Currently selected mode (from ComboBox)
     property string currentMode: {
         for (var i = 0; i < root._modeOrder.length; i++)
             if (root._modeEnabled.indexOf(root._modeOrder[i]) >= 0)
@@ -72,32 +71,32 @@ PlasmoidItem {
         return "youdao"
     }
 
-    // ── Translation state ───────────────────────────────────
+    // Translation state
     property string inputText: ""
     property var youdaoResult: null
     property var dictionaryResult: null
     property bool translating: false
     property string errorMessage: ""
 
-    // ── 同语言翻译拦截 ──────────────────────────────
+    // 同语言翻译拦截
     // AI 模式下 sourceLang 和 targetLang 显式相同时禁止翻译
     readonly property bool _sameLangPair: (root.currentMode === "deepseek" || root.currentMode === "siliconflow")
         && root.sourceLang !== "auto"
         && root.targetLang !== "auto"
         && root.sourceLang === root.targetLang
 
-    // ── DeepSeek streaming display ──────────────────────────
+    // DeepSeek streaming display
     property string streamingTranslation: ""
     property string streamingInput: ""
 
-    // ── Structured AI result (parsed JSON for display) ──────
+    // Structured AI result (parsed JSON for display)
     property var aiResult: null
 
-    // ── DB record ID (UUID) for the currently displayed AI result ─
+    // DB record ID (UUID) for the currently displayed AI result
     // Used by deleteCurrentResult() to remove from the cache DB.
     property string currentTranslationId: ""
 
-    // ── Flat grid models for column-aligned display ────────
+    // Flat grid models for column-aligned display
     readonly property var _flatWordModel: {
         if (!root.aiResult || !root.aiResult.words) return []
         var m = []
@@ -148,7 +147,7 @@ PlasmoidItem {
         return false
     }
 
-    // ── History cache (DB-backed, used for duplicate detection) ─
+    // History cache (DB-backed, used for duplicate detection)
     function _getCachedHistory(text, sourceLang, targetLang) {
         try {
             var json = pasteSelectionHelper.proc.exec(
@@ -168,7 +167,7 @@ PlasmoidItem {
         return null
     }
 
-    // ── Shared cache-hit apply ───────────────────────────────
+    // Shared cache-hit apply
     // Both DeepSeek and SiliconFlow use the same logic when a
     // cached result is found.
     function _applyCachedResult(cached) {
@@ -183,7 +182,7 @@ PlasmoidItem {
         translating = false
     }
 
-    // ── UUID generator ──────────────────────────────────────
+    // UUID generator
     function _generateUuid() {
         var hex = "0123456789abcdef"
         var uuid = ""
@@ -201,7 +200,7 @@ PlasmoidItem {
         return uuid
     }
 
-    // ── DB insert helper ─────────────────────────────────────
+    // DB insert helper
     function _insertTranslation(engine, result) {
         try {
             var uuid = root._generateUuid()
@@ -220,7 +219,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Delete current result (DB + UI state) ────────────────
+    // Delete current result (DB + UI state)
     function deleteCurrentResult() {
         var idToDelete = root.currentTranslationId
 
@@ -267,7 +266,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Cancel the current translation ─────────────────────────
+    // Cancel the current translation
     function cancelTranslation() {
         if (root.currentMode === "deepseek") {
             deepseekService.cancel()
@@ -287,19 +286,19 @@ PlasmoidItem {
         }
     }
 
-    // ── Reference to inputField inside fullRepresentation ───
+    // Reference to inputField inside fullRepresentation
     property QtObject p_inputField: null
 
-    // ── Distinguish click (just toggle) from shortcut (pick+paste)
+    // Distinguish click (just toggle) from shortcut (pick+paste)
     property bool _openedByClick: false
 
-    // ── Performance timing for async selection
+    // Performance timing for async selection
     property var _tPanelOpen: 0
 
-    // ── PasteSelectionHelper (reads PRIMARY via QClipboard) ─
+    // PasteSelectionHelper (reads PRIMARY via QClipboard)
     PasteSelectionHelper { id: pasteSelectionHelper }
 
-    // ── Current mode persistence ────────────────────────────
+    // Current mode persistence
     // Persists through ProcessHelper's separate config so mode
     // choice survives across sessions independently of KConfig.
     function _saveUiConfig(obj) {
@@ -339,7 +338,7 @@ PlasmoidItem {
         } catch(e) {}
     }
 
-    // ── Dim parenthetical notes gray ────────────────────
+    // Dim parenthetical notes gray
     function grayBrackets(text) {
         return text
             // HTML entity angle brackets: &lt;史&gt; → dimmed gray
@@ -354,7 +353,7 @@ PlasmoidItem {
             .replace(/\n/g, '<br>')
     }
 
-    // ── Translation handler ─────────────────────────────────
+    // Translation handler
     function translate(text) {
         if (!text || text.trim().length === 0) return
         var t = text.trim()
@@ -411,7 +410,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Pick text from focused window when panel opens ────
+    // Pick text from focused window when panel opens
     onExpandedChanged: {
         console.log("onExpandedChanged: expanded=", root.expanded)
         if (!root.expanded) {
@@ -479,7 +478,7 @@ PlasmoidItem {
         root.translate(p_inputField.text)
     }
 
-    // ── Translation services ───────────────────────────────
+    // Translation services
     Services.YoudaoWebNewService {
         id: youdaoService
         onFinished: function(result) {
@@ -512,7 +511,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Free Dictionary API service ──────────────────────────
+    // Free Dictionary API service
     Services.FreeDictionaryApiService {
         id: dictionaryService
         onFinished: function(result) {
@@ -525,7 +524,7 @@ PlasmoidItem {
         }
     }
 
-    // ── SiliconFlow API service ──────────────────────────────
+    // SiliconFlow API service
     Services.SiliconFlowService {
         id: siliconFlowService
         onStreamingUpdate: function(text) {
@@ -546,7 +545,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Compact: taskbar icon ───────────────────────────────
+    // Compact: taskbar icon
     compactRepresentation: Kirigami.Icon {
         source: "translate"
         implicitWidth: Kirigami.Units.iconSizes.small
@@ -561,14 +560,14 @@ PlasmoidItem {
         }
     }
 
-    // ── Full: popup panel ───────────────────────────────────
+    // Full: popup panel
     fullRepresentation: Item {
         Layout.minimumWidth: 380
         Layout.minimumHeight: 320
         Layout.preferredWidth: 440
         Layout.preferredHeight: 480
 
-        // ── 吸顶加载条 (web 风格) ────────────────────────
+        // 吸顶加载条 (web 风格)
         Rectangle {
             anchors { top: parent.top; left: parent.left; right: parent.right }
             height: 3
@@ -613,9 +612,7 @@ PlasmoidItem {
             anchors.fill: parent
             spacing: 0
 
-            // ════════════════════════════════════════════════
-            //  Input area (replaces former header)
-            // ════════════════════════════════════════════════
+            // Input area (replaces former header)
             Item {
                 Layout.fillWidth: true
                 Layout.topMargin: Kirigami.Units.largeSpacing
@@ -656,9 +653,7 @@ PlasmoidItem {
                 }
             }
 
-            // ════════════════════════════════════════════════
-            //  Translate mode selector
-            // ════════════════════════════════════════════════
+            // Translate mode selector
             Item {
                 Layout.fillWidth: true
                 Layout.leftMargin: Kirigami.Units.largeSpacing
@@ -723,7 +718,7 @@ PlasmoidItem {
                 }
             }
 
-            // -- Language bar (AI modes only) -------------------------
+            // Language bar (AI modes only)
             Item {
                 visible: root.currentMode === "deepseek" || root.currentMode === "siliconflow"
                 Layout.fillWidth: true
@@ -818,9 +813,7 @@ PlasmoidItem {
                 }
             }
 
-            // ════════════════════════════════════════════════
-            //  Results area
-            // ════════════════════════════════════════════════
+            // Results area
             QQC2.ScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -836,7 +829,7 @@ PlasmoidItem {
                     width: parent.width
                     spacing: Kirigami.Units.smallSpacing
 
-                    // ── Error ─────────────────────────────
+                    // Error
                     PlasmaComponents3.Label {
                         visible: root.errorMessage !== ""
                         text: root.errorMessage
@@ -846,7 +839,7 @@ PlasmoidItem {
                         Layout.fillWidth: true
                     }
 
-                    // ── Youdao result ─────────────────────
+                    // Youdao result
                     Rectangle {
                         visible: youdaoResult !== null
                         Layout.fillWidth: true
@@ -862,7 +855,7 @@ PlasmoidItem {
                             }
                             spacing: Kirigami.Units.smallSpacing
 
-                            // ── No result notice ────────────
+                            // No result notice
                             PlasmaComponents3.Label {
                                 visible: youdaoResult && youdaoResult.exp.length === 0
                                 text: i18n("No dictionary results found.")
@@ -871,7 +864,7 @@ PlasmoidItem {
                                 Layout.fillWidth: true
                             }
 
-                            // ── Audio bar ──────────────────
+                            // Audio bar
                             Rectangle {
                                 visible: youdaoResult && youdaoResult.audio && youdaoResult.audio.length > 0
                                 Layout.fillWidth: true
@@ -917,7 +910,7 @@ PlasmoidItem {
                                 }
                             }
 
-                            // ── Exam type tags ─────────────
+                            // Exam type tags
                             Flow {
                                 visible: youdaoResult && youdaoResult.examType && youdaoResult.examType.length > 0
                                 Layout.fillWidth: true
@@ -935,7 +928,7 @@ PlasmoidItem {
                                 }
                             }
 
-                            // ── Forms ──────────────────────
+                            // Forms
                             Flow {
                                 visible: youdaoResult && youdaoResult.form && youdaoResult.form.length > 0
                                 Layout.fillWidth: true
@@ -963,7 +956,7 @@ PlasmoidItem {
                                 }
                             }
 
-                            // ── Definitions (exp) ──────────
+                            // Definitions (exp)
                             ColumnLayout {
                                 visible: youdaoResult && youdaoResult.exp && youdaoResult.exp.length > 0
                                 Layout.fillWidth: true
@@ -1055,7 +1048,7 @@ PlasmoidItem {
                         }
                     }
 
-                    // ── Free Dictionary API result ────────────
+                    // Free Dictionary API result
                     Rectangle {
                         visible: dictionaryResult !== null && root.currentMode === "dictionary"
                         Layout.fillWidth: true
@@ -1071,7 +1064,7 @@ PlasmoidItem {
                             }
                             spacing: Kirigami.Units.smallSpacing
 
-                            // ── No result / error notice ──────
+                            // No result / error notice
                             PlasmaComponents3.Label {
                                 visible: dictionaryResult && (
                                     dictionaryResult.error ||
@@ -1087,7 +1080,7 @@ PlasmoidItem {
                                 Layout.fillWidth: true
                             }
 
-                            // ── Phonetic text ────────────────
+                            // Phonetic text
                             PlasmaComponents3.Label {
                                 visible: dictionaryResult && dictionaryResult.phonetic
                                     && dictionaryResult.phonetic.length > 0
@@ -1098,7 +1091,7 @@ PlasmoidItem {
                                 Layout.fillWidth: true
                             }
 
-                            // ── Origin / etymology ────────────
+                            // Origin / etymology
                             PlasmaComponents3.Label {
                                 visible: dictionaryResult && dictionaryResult.origin
                                     && dictionaryResult.origin.length > 0
@@ -1110,7 +1103,7 @@ PlasmoidItem {
                                 Layout.fillWidth: true
                             }
 
-                            // ── Audio bar ──────────────────
+                            // Audio bar
                             Rectangle {
                                 visible: dictionaryResult && dictionaryResult.audio
                                     && dictionaryResult.audio.length > 0
@@ -1156,7 +1149,7 @@ PlasmoidItem {
                                 }
                             }
 
-                            // ── Definitions (exp) ──────────
+                            // Definitions (exp)
                             Repeater {
                                 model: dictionaryResult ? dictionaryResult.exp : []
 
@@ -1211,7 +1204,7 @@ PlasmoidItem {
                         }
                     }
 
-                    // ── AI engine result (DeepSeek / SiliconFlow) ──
+                    // AI engine result (DeepSeek / SiliconFlow)
                     Rectangle {
                         visible: (root.currentMode === "deepseek" || root.currentMode === "siliconflow") && root.streamingInput !== ""
                         Layout.fillWidth: true
@@ -1227,15 +1220,13 @@ PlasmoidItem {
                             }
                             spacing: Kirigami.Units.smallSpacing
 
-                            // ═════════════════════════════════════
-                            //  STREAMING MODE — raw text as it arrives
-                            // ═════════════════════════════════════
+                            // STREAMING MODE — raw text as it arrives
                             ColumnLayout {
                                 visible: root.translating
                                 spacing: Kirigami.Units.smallSpacing
                                 Layout.fillWidth: true
 
-                                // ── Waiting state (no content yet) ──
+                                // Waiting state (no content yet)
                                 RowLayout {
                                     visible: root.streamingTranslation === ""
                                     spacing: 4
@@ -1272,7 +1263,7 @@ PlasmoidItem {
                                     }
                                 }
 
-                                // ── Streaming content ──────────────
+                                // Streaming content
                                 TextEdit {
                                     visible: root.streamingTranslation !== ""
                                     text: root.streamingTranslation
@@ -1288,15 +1279,13 @@ PlasmoidItem {
                                 }
                             }
 
-                            // ═════════════════════════════════════
-                            //  STRUCTURED RESULT — parsed JSON display
-                            // ═════════════════════════════════════
+                            // STRUCTURED RESULT — parsed JSON display
                             ColumnLayout {
                                 visible: !root.translating && root.aiResult !== null
                                 Layout.fillWidth: true
                                 spacing: Kirigami.Units.smallSpacing
 
-                                // ── Translation ──────────────
+                                // Translation
                                 PlasmaComponents3.Label {
                                     text: i18n("Translation")
                                     font.bold: true
@@ -1318,7 +1307,7 @@ PlasmoidItem {
                                     height: contentHeight
                                 }
 
-                                // ── Words (词汇分析) ─────────
+                                // Words (词汇分析)
                                 ColumnLayout {
                                     visible: root.aiResult && root.aiResult.words && root.aiResult.words.length > 0
                                     Layout.fillWidth: true
@@ -1389,7 +1378,7 @@ PlasmoidItem {
                                     }
                                 }
 
-                                // ── Frequently (常用搭配) ───
+                                // Frequently (常用搭配)
                                 ColumnLayout {
                                     visible: root.aiResult && root.aiResult.frequently && root.aiResult.frequently.length > 0
                                     Layout.fillWidth: true
@@ -1456,7 +1445,7 @@ PlasmoidItem {
                             }
                         }
 
-                        // ── Floating cancel button (streaming) ───
+                        // Floating cancel button (streaming)
                         QQC2.Button {
                             visible: root.translating
                             anchors.top: parent.top
@@ -1476,7 +1465,7 @@ PlasmoidItem {
                             onClicked: root.cancelTranslation()
                         }
 
-                        // ── Floating delete button ───────────
+                        // Floating delete button
                         QQC2.Button {
                             visible: !root.translating && root.aiResult !== null
                             anchors.top: parent.top
@@ -1503,7 +1492,7 @@ PlasmoidItem {
         }
     }
 
-    // ── Tooltip ─────────────────────────────────────────────
+    // Tooltip
     toolTipMainText: i18n("Lingua Spanner — Translate")
     toolTipSubText: {
         if (inputText.length > 0) return i18n("Last: %1", inputText)

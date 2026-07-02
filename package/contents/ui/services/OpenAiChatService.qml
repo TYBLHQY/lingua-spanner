@@ -1,8 +1,7 @@
-// ── OpenAI Chat Completions API Translation Service ─────────
+// OpenAI Chat Completions API Translation Service
 // Generic service for any OpenAI-compatible Chat API provider.
 // Supports streaming (SSE) and non-streaming modes.
 // Set baseUrl and serviceName for each provider.
-//
 // https://platform.openai.com/docs/api-reference/chat/create
 
 import QtQuick
@@ -10,7 +9,7 @@ import QtQuick
 QtObject {
     id: root
 
-    // ── Provider identity (set by wrappers) ────────────────
+    // Provider identity (set by wrappers)
     property string baseUrl: ""
     property string serviceName: "OpenAI-compatible API"
 
@@ -89,7 +88,7 @@ QtObject {
         xhr.setRequestHeader("Authorization", "Bearer " + apiKey)
 
         if (stream) {
-            // ── Streaming mode (SSE) ──────────────────────
+            // Streaming mode (SSE)
             xhr.setRequestHeader("Accept", "text/event-stream")
 
             var accumulated = ""
@@ -156,7 +155,7 @@ QtObject {
                 }
             }
         } else {
-            // ── Non-streaming mode ─────────────────────────
+            // Non-streaming mode
             xhr.setRequestHeader("Accept", "application/json")
 
             xhr.onreadystatechange = function() {

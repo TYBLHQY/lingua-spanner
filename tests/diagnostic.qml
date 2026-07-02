@@ -1,4 +1,4 @@
-// ── Lingua Spanner Diagnostic ──────────────────────────────
+// Lingua Spanner Diagnostic
 // Run: qml6 -I ../package/contents/lib diagnostic.qml
 // Tests: ProcessHelper (QClipboard), Youdao, DeepSeek
 
@@ -23,7 +23,7 @@ Window {
 
         Label { text: "Lingua Spanner Diagnostic"; font.bold: true; font.pixelSize: 18 }
 
-        // ── ProcessHelper test ────────────────────────────
+        // ProcessHelper test
         Rectangle { width: parent.width; height: 1; color: "#ccc" }
         Label { text: "1. ProcessHelper (QClipboard PRIMARY)"; font.bold: true }
 
@@ -40,7 +40,7 @@ Window {
             }
         }
 
-        // ── Plasmoid flow simulation ──────────────────────
+        // Plasmoid flow simulation
         Rectangle { width: parent.width; height: 1; color: "#ccc" }
         Label { text: "2. Simulate Plasmoid Flow"; font.bold: true }
         Label { id: flowLabel; text: "Click to simulate"; color: "gray"; wrapMode: Text.WordWrap; width: parent.width }
@@ -61,7 +61,7 @@ Window {
             }
         }
 
-        // ── Youdao test ───────────────────────────────────
+        // Youdao test
         Rectangle { width: parent.width; height: 1; color: "#ccc" }
         Label { text: "3. Youdao Web Scraping"; font.bold: true }
         Label { id: youdaoLabel; text: "not tested"; color: "gray"; wrapMode: Text.WordWrap; width: parent.width }
@@ -88,7 +88,7 @@ Window {
             }
         }
 
-        // ── DeepSeek test ─────────────────────────────────
+        // DeepSeek test
         Rectangle { width: parent.width; height: 1; color: "#ccc" }
         Label { text: "4. DeepSeek API"; font.bold: true }
         Label { id: dsLabel; text: "Need API key configured"; color: "gray"; wrapMode: Text.WordWrap; width: parent.width }
@@ -130,7 +130,7 @@ Window {
         Item { height: 20 }
         Label { text: "Tip: Select text in another window, then click 'Read PRIMARY'"; color: "gray"; font.italic: true; wrapMode: Text.WordWrap; width: parent.width }
 
-        // ── SQLite CRUD test ──────────────────────────────────
+        // SQLite CRUD test
         Rectangle { width: parent.width; height: 1; color: "#ccc" }
         Label { text: "5. SQLite CRUD"; font.bold: true }
         Label { id: sqlLabel; text: "not tested"; color: "gray"; wrapMode: Text.WordWrap; width: parent.width }

@@ -1,4 +1,4 @@
-// ── DeepSeek API Translation Service ───────────────────────
+// DeepSeek API Translation Service
 // Thin wrapper around OpenAiChatService for DeepSeek.
 // API: https://api.deepseek.com/chat/completions
 
