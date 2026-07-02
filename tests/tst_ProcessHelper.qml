@@ -1,29 +1,113 @@
 // ── ProcessHelper Unit Tests ──────────────────────────────
-// Run: qml6 -I ../package/contents/lib -I . tst_ProcessHelper.qml
+// Run: qml6 -I ../package/contents/lib tst_ProcessHelper.qml
+//
+// Each test uses a fresh ProcessHelper via a dedicated property.
+// QML_ELEMENT types cannot be created with `var ph = ProcessHelper {}`
+// inside JS — they must be declared as QML properties.
+
 import QtQuick
 import QtTest
 import LinguaSpannerHelper
 
-TestCase {
-    name: "ProcessHelper"
+Item {
+    // ── Shared for all tests (reused across test functions) ──
+    property ProcessHelper ph1: ProcessHelper {}
+    property ProcessHelper ph2: ProcessHelper {}
+    property ProcessHelper ph3: ProcessHelper {}
 
-    function test_readPrimarySelection_returnsString() {
-        var ph = ProcessHelper {}
-        var result = ph.readPrimarySelection()
-        // Should always return a string (possibly empty)
-        compare(typeof result, "string")
-    }
+    TestCase {
+        name: "ProcessHelper"
 
-    function test_selectionTimestamp_property() {
-        var ph = ProcessHelper {}
-        verify(typeof ph.selectionTimestamp === "number")
-        verify(ph.selectionTimestamp >= 0)
-    }
+        function cleanupTestCase() {
+            ph1.closeDb()
+            ph2.closeDb()
+            ph3.closeDb()
+        }
 
-    function test_multipleInstances() {
-        var ph1 = ProcessHelper {}
-        var ph2 = ProcessHelper {}
-        compare(typeof ph1.readPrimarySelection(), "string")
-        compare(typeof ph2.readPrimarySelection(), "string")
+        function test_readPrimarySelection_returnsString() {
+            var result = ph1.readPrimarySelection()
+            compare(typeof result, "string")
+        }
+
+        function test_selectionTimestamp_property() {
+            verify(typeof ph1.selectionTimestamp === "number")
+            verify(ph1.selectionTimestamp >= 0)
+        }
+
+        function test_multipleInstances() {
+            compare(typeof ph1.readPrimarySelection(), "string")
+            compare(typeof ph2.readPrimarySelection(), "string")
+        }
+
+        // ── SQLite CRUD (each function calls initDb; QTest runs alphabetically) ──
+
+        function test_delete() {
+            ph2.initDb()
+            ph2.exec("DELETE FROM results WHERE engine='t'", "[]")
+            ph2.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
+                JSON.stringify(["t","del","x"]))
+            var before = JSON.parse(ph2.exec("SELECT count(*) AS c FROM results WHERE engine='t'", "[]"))
+            compare(before[0].c, 1)
+            ph2.exec("DELETE FROM results WHERE input_text=?", JSON.stringify(["del"]))
+            var after = JSON.parse(ph2.exec("SELECT count(*) AS c FROM results WHERE engine='t'", "[]"))
+            compare(after[0].c, 0)
+        }
+
+        function test_initDb_is_idempotent() {
+            ph1.initDb()
+            ph1.initDb()
+            verify(true, "initDb called twice without crash")
+        }
+
+        function test_insert_select() {
+            ph2.initDb()
+            ph2.exec("DELETE FROM results WHERE engine='t'", "[]")
+            ph2.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
+                JSON.stringify(["t","hello","world"]))
+            var json = ph2.exec("SELECT * FROM results WHERE engine='t'", "[]")
+            var rows = JSON.parse(json)
+            compare(rows.length, 1)
+            compare(rows[0].input_text, "hello")
+            compare(rows[0].result, "world")
+            compare(rows[0].engine, "t")
+            verify(!!rows[0].id, "id should be truthy")
+            verify(!!rows[0].created_at, "created_at should be truthy")
+        }
+
+        function test_multiple_rows() {
+            ph1.initDb()
+            ph1.exec("DELETE FROM results WHERE engine='t'", "[]")
+            ph1.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
+                JSON.stringify(["t","a","1"]))
+            ph1.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
+                JSON.stringify(["t","b","2"]))
+            var rows = JSON.parse(ph1.exec("SELECT result FROM results WHERE engine='t' ORDER BY input_text", "[]"))
+            compare(rows.length, 2)
+            compare(rows[0].result, "1")
+            compare(rows[1].result, "2")
+        }
+
+        function test_reopen_persists_data() {
+            ph3.initDb()
+            ph3.exec("DELETE FROM results WHERE engine='t'", "[]")
+            ph3.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
+                JSON.stringify(["t","k","v"]))
+            ph3.closeDb()
+
+            // New instance reads same DB
+            ph1.initDb()
+            var rows = JSON.parse(ph1.exec("SELECT result FROM results WHERE engine='t' AND input_text='k'", "[]"))
+            compare(rows[0].result, "v")
+            ph1.exec("DELETE FROM results WHERE engine='t'", "[]")
+            var empty = JSON.parse(ph1.exec("SELECT count(*) AS c FROM results WHERE engine='t'", "[]"))
+            compare(empty[0].c, 0)
+        }
+
+        function test_select1() {
+            ph1.initDb()
+            var r = ph1.exec("SELECT 1 AS ok", "[]")
+            var o = JSON.parse(r)
+            compare(o[0].ok, 1)
+        }
     }
 }

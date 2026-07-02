@@ -129,5 +129,77 @@ Window {
 
         Item { height: 20 }
         Label { text: "Tip: Select text in another window, then click 'Read PRIMARY'"; color: "gray"; font.italic: true; wrapMode: Text.WordWrap; width: parent.width }
+
+        // ── SQLite CRUD test ──────────────────────────────────
+        Rectangle { width: parent.width; height: 1; color: "#ccc" }
+        Label { text: "5. SQLite CRUD"; font.bold: true }
+        Label { id: sqlLabel; text: "not tested"; color: "gray"; wrapMode: Text.WordWrap; width: parent.width }
+
+        Row {
+            spacing: 6
+            Button {
+                text: "Init DB"
+                onClicked: {
+                    proc.initDb()
+                    sqlLabel.text = "✅ DB initialized"
+                    sqlLabel.color = "green"
+                }
+            }
+            Button {
+                text: "INSERT test"
+                onClicked: {
+                    try {
+                        proc.initDb()
+                        proc.exec("DELETE FROM results WHERE engine='test'", "[]")
+                        proc.exec("INSERT INTO results(engine,input_text,result) VALUES(?,?,?)",
+                            JSON.stringify(["test","hello","world"]))
+                        sqlLabel.text = "✅ INSERT OK"
+                        sqlLabel.color = "green"
+                    } catch(e) {
+                        sqlLabel.text = "❌ " + e
+                        sqlLabel.color = "red"
+                    }
+                }
+            }
+            Button {
+                text: "SELECT test"
+                onClicked: {
+                    try {
+                        proc.initDb()
+                        var json = proc.exec("SELECT * FROM results WHERE engine='test'", "[]")
+                        var rows = JSON.parse(json)
+                        sqlLabel.text = "✅ SELECT: " + rows.length + " rows\n" + JSON.stringify(rows, null, 2)
+                        sqlLabel.color = "green"
+                    } catch(e) {
+                        sqlLabel.text = "❌ " + e
+                        sqlLabel.color = "red"
+                    }
+                }
+            }
+            Button {
+                text: "DELETE test"
+                onClicked: {
+                    try {
+                        proc.initDb()
+                        proc.exec("DELETE FROM results WHERE engine='test'", "[]")
+                        var json = proc.exec("SELECT * FROM results WHERE engine='test'", "[]")
+                        var rows = JSON.parse(json)
+                        sqlLabel.text = "✅ DELETE OK, rows left: " + rows.length
+                        sqlLabel.color = "green"
+                    } catch(e) {
+                        sqlLabel.text = "❌ " + e
+                        sqlLabel.color = "red"
+                    }
+                }
+            }
+            Button {
+                text: "Close DB"
+                onClicked: {
+                    proc.closeDb()
+                    sqlLabel.text = "✅ DB closed"
+                    sqlLabel.color = "green"
+                }
+            }
+        }
     }
 }

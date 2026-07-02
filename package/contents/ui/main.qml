@@ -28,11 +28,6 @@ PlasmoidItem {
     readonly property double deepseekTemperature: Plasmoid.configuration.deepseekTemperature !== undefined ? Plasmoid.configuration.deepseekTemperature : 1.0
     readonly property int deepseekMaxTokens: Plasmoid.configuration.deepseekMaxTokens || 4096
     readonly property double deepseekTopP: Plasmoid.configuration.deepseekTopP !== undefined ? Plasmoid.configuration.deepseekTopP : 1.0
-    readonly property string systemPromptDefault: "You are a professional translator. Translate the given text accurately and naturally. Preserve the original meaning, tone, and style. If the source is English, translate to Chinese; if Chinese, translate to English. Output ONLY the translation, no explanations."
-    readonly property string systemPrompt: {
-        var v = Plasmoid.configuration.systemPrompt
-        return (v && v.trim().length > 0) ? v.trim() : systemPromptDefault
-    }
     readonly property bool deepseekStream: Plasmoid.configuration.deepseekStream !== undefined ? Plasmoid.configuration.deepseekStream : true
     readonly property string siliconFlowApiKey: Plasmoid.configuration.siliconFlowApiKey || ""
     readonly property string siliconFlowModel: Plasmoid.configuration.siliconFlowModel || "deepseek-ai/DeepSeek-V4-Flash"
@@ -43,6 +38,22 @@ PlasmoidItem {
     readonly property int fontSizeLarge: fontSizeBase + 1
     readonly property int fontSizeSmall: Math.max(6, fontSizeBase - 2)
     readonly property int fontSizeSecondary: Math.max(6, fontSizeBase - 1)
+
+    // -- Language pair (AI modes only) -------------------------
+    property string sourceLang: "auto"
+    property string targetLang: "auto"
+    property string firstLanguage: Plasmoid.configuration.firstLanguage || "zh"
+    property string secondLanguage: Plasmoid.configuration.secondLanguage || "en"
+
+    readonly property var _langModel: [
+        { text: i18n("Auto Detect"),  value: "auto" },
+        { text: "简体中文",            value: "zh" },
+        { text: "English",            value: "en" },
+        { text: "Deutsch",            value: "de" },
+        { text: "日本語",              value: "ja" },
+        { text: "Français",           value: "fr" },
+        { text: "Español",            value: "es" }
+    ]
 
     // ── Mode label lookup ───────────────────────────────────
     readonly property var _modeLabels: ({
@@ -74,12 +85,6 @@ PlasmoidItem {
 
     // ── DeepSeek history (in-memory) ────────────────────────
     property var dsHistory: []
-
-    // When the system prompt changes, clear history to avoid
-    // stale cached results being returned without a new API call.
-    onSystemPromptChanged: {
-        dsHistory = []
-    }
 
     function addHistory(input, translation) {
         var entry = findInHistory(input)
@@ -114,6 +119,46 @@ PlasmoidItem {
 
     // ── PasteSelectionHelper (reads PRIMARY via QClipboard) ─
     PasteSelectionHelper { id: pasteSelectionHelper }
+
+    // ── Language pair persistence ────────────────────────────
+    // Each save-merges into the existing JSON so one field change
+    // never accidentally overwrites others with default values.
+    function _saveUiConfig(obj) {
+        try {
+            var existing = JSON.parse(pasteSelectionHelper.proc.loadConfig() || "{}")
+            for (var k in obj)
+                existing[k] = obj[k]
+            pasteSelectionHelper.proc.saveConfig(JSON.stringify(existing))
+        } catch(e) {}
+    }
+
+    function _loadUiConfig() {
+        try {
+            var cfg = JSON.parse(pasteSelectionHelper.proc.loadConfig())
+            if (cfg.sourceLang && cfg.sourceLang !== root.sourceLang)
+                root.sourceLang = cfg.sourceLang
+            if (cfg.targetLang && cfg.targetLang !== root.targetLang)
+                root.targetLang = cfg.targetLang
+            if (cfg.currentMode && cfg.currentMode !== root.currentMode)
+                root.currentMode = cfg.currentMode
+
+            // Sync combo indices after loading (they init'ed with defaults)
+            Qt.callLater(function() {
+                // mode combo
+                for (var i = 0; i < modeCombo.model.length; i++)
+                    if (modeCombo.model[i].value === root.currentMode)
+                        { modeCombo.currentIndex = i; break }
+                // source lang combo
+                for (var i = 0; i < sourceLangCombo.model.length; i++)
+                    if (sourceLangCombo.model[i].value === root.sourceLang)
+                        { sourceLangCombo.currentIndex = i; break }
+                // target lang combo
+                for (var i = 0; i < targetLangCombo.model.length; i++)
+                    if (targetLangCombo.model[i].value === root.targetLang)
+                        { targetLangCombo.currentIndex = i; break }
+            })
+        } catch(e) {}
+    }
 
     // ── Dim parenthetical notes gray ────────────────────
     function grayBrackets(text) {
@@ -161,7 +206,7 @@ PlasmoidItem {
                 translating = false
             } else {
                 streamingInput = inputText
-                siliconFlowService.translate(inputText, siliconFlowApiKey, siliconFlowModel, systemPrompt, null, 4096, null, siliconFlowStream)
+                siliconFlowService.translate(inputText, siliconFlowApiKey, siliconFlowModel, siliconFlowStream, null, 4096, null, root.sourceLang, root.targetLang)
             }
         } else {
             // deepseek — check history cache first
@@ -175,7 +220,7 @@ PlasmoidItem {
                 translating = false
             } else {
                 streamingInput = inputText
-                deepseekService.translate(inputText, deepseekApiKey, deepseekModel, systemPrompt, deepseekTemperature, deepseekMaxTokens, deepseekTopP, deepseekStream)
+                deepseekService.translate(inputText, deepseekApiKey, deepseekModel, deepseekStream, deepseekTemperature, deepseekMaxTokens, deepseekTopP, root.sourceLang, root.targetLang)
             }
         }
     }
@@ -225,6 +270,7 @@ PlasmoidItem {
     // Also handle initial load (plasmawindowed starts expanded)
     Component.onCompleted: {
         console.log("Component.onCompleted: expanded=", root.expanded)
+        root._loadUiConfig()
         if (root.expanded) {
             Qt.callLater(root.handlePanelOpened)
         }
@@ -508,6 +554,7 @@ PlasmoidItem {
                                 dictionaryResult = null
                                 // Write to local state
                                 root.currentMode = currentValue
+                                root._saveUiConfig({currentMode: root.currentMode})
                                 // Auto-translate if input is not empty
                                 Qt.callLater(function() {
                                     if (inputField.text.trim().length > 0) {
@@ -519,6 +566,101 @@ PlasmoidItem {
                     }
                 }
             }
+            // -- Language bar (AI modes only) -------------------------
+            Item {
+                visible: root.currentMode === "deepseek" || root.currentMode === "siliconflow"
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.largeSpacing
+                Layout.rightMargin: Kirigami.Units.largeSpacing
+                Layout.topMargin: Kirigami.Units.smallSpacing
+                implicitHeight: langRow.implicitHeight
+
+                RowLayout {
+                    id: langRow
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    spacing: Kirigami.Units.smallSpacing
+
+                    QQC2.ComboBox {
+                        id: sourceLangCombo
+                        Layout.fillWidth: true
+                        model: root._langModel
+                        textRole: "text"
+                        valueRole: "value"
+
+                        // Guard to prevent init-time writes to config
+                        property bool _ready: false
+
+                        Component.onCompleted: {
+                            for (var i = 0; i < model.length; i++)
+                                if (model[i].value === root.sourceLang) {
+                                    currentIndex = i
+                                    break
+                                }
+                            _ready = true
+                        }
+                        onCurrentValueChanged: {
+                            if (!_ready) return
+                            if (root.sourceLang !== currentValue) {
+                                root.sourceLang = currentValue
+                                root._saveUiConfig({sourceLang: currentValue})
+                            }
+                        }
+                    }
+
+                    QQC2.Button {
+                        text: "⇄"
+                        font.pixelSize: root.fontSizeLarge
+                        implicitWidth: Kirigami.Units.iconSizes.medium
+                        implicitHeight: Kirigami.Units.iconSizes.medium
+                        flat: true
+                        Accessible.name: i18n("Swap languages")
+                        onClicked: {
+                            // Swap values
+                            var tmp = root.sourceLang
+                            root.sourceLang = root.targetLang
+                            root.targetLang = tmp
+                            root._saveUiConfig({sourceLang: root.sourceLang, targetLang: root.targetLang})
+
+                            // Update ComboBox visual selection
+                            for (var i = 0; i < sourceLangCombo.model.length; i++)
+                                if (sourceLangCombo.model[i].value === root.sourceLang)
+                                    { sourceLangCombo.currentIndex = i; break }
+                            for (var i = 0; i < targetLangCombo.model.length; i++)
+                                if (targetLangCombo.model[i].value === root.targetLang)
+                                    { targetLangCombo.currentIndex = i; break }
+                        }
+                    }
+
+                    QQC2.ComboBox {
+                        id: targetLangCombo
+                        Layout.fillWidth: true
+                        model: root._langModel
+                        textRole: "text"
+                        valueRole: "value"
+
+                        // Guard to prevent init-time writes to config
+                        property bool _ready: false
+
+                        Component.onCompleted: {
+                            for (var i = 0; i < model.length; i++)
+                                if (model[i].value === root.targetLang) {
+                                    currentIndex = i
+                                    break
+                                }
+                            _ready = true
+                        }
+                        onCurrentValueChanged: {
+                            if (!_ready) return
+                            if (root.targetLang !== currentValue) {
+                                root.targetLang = currentValue
+                                root._saveUiConfig({targetLang: currentValue})
+                            }
+                        }
+                    }
+                }
+            }
+
 
             // ════════════════════════════════════════════════
             //  Results area

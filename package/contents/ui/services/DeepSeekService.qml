@@ -11,7 +11,7 @@ QtObject {
     signal streamingUpdate(string partialText)
     signal error(string message)
 
-    function translate(text, apiKey, model, systemPrompt, temperature, maxTokens, topP, stream) {
+    function translate(text, apiKey, model, stream, temperature, maxTokens, topP, sourceLang, targetLang) {
         if (!text || text.trim().length === 0) {
             error("Empty text")
             return
@@ -23,7 +23,16 @@ QtObject {
 
         var url = "https://api.deepseek.com/chat/completions"
 
-        var systemContent = systemPrompt ? systemPrompt.trim() : ""
+        // Build the prompt with language pair
+        var langInfo = ""
+        if (sourceLang && sourceLang !== "auto" && sourceLang.length > 0)
+            langInfo += " Source language: " + sourceLang + "."
+        if (targetLang && targetLang !== "auto" && targetLang.length > 0)
+            langInfo += " Target language: " + targetLang + "."
+        if (!langInfo)
+            langInfo = " Auto-detect source and target language."
+
+        var systemContent = "You are a bilingual translator. Translate the given text and provide lexical analysis. Output ONLY a JSON object following this schema: {\"translate\":\"(str)\",\"source_lang\":\"(str)\",\"target_lang\":\"(str)\",\"words\":[{\"word\":\"(str)\",\"pos\":\"(str)\",\"meaning\":\"(str)\"}],\"frequently\":[{\"phrase\":\"(str)\",\"translation\":\"(str)\"}]}." + langInfo + " Rules: translate is required. For single-word input include words (max 8 meanings) and optionally frequently (max 4 collocations). For sentence input optionally include words (2-5 key vocabulary). Use ISO 639-1 language codes."
 
         var body = {
             model: model || "deepseek-v4-flash",
@@ -31,7 +40,8 @@ QtObject {
                 { role: "system", content: systemContent },
                 { role: "user", content: text }
             ],
-            stream: stream ? true : false
+            stream: stream ? true : false,
+            response_format: { type: "json_object" }
         }
 
         if (temperature !== undefined && temperature !== null && temperature >= 0 && temperature <= 2)
@@ -108,11 +118,16 @@ QtObject {
                 // Finalize on DONE
                 if (xhr.readyState === XMLHttpRequest.DONE) {
                     if (xhr.status === 200) {
-                        finished({
-                            translation: accumulated,
-                            model: model,
-                            usage: null
-                        })
+                        // Parse the accumulated JSON from streaming
+                        var result = { translation: accumulated }
+                        try {
+                            var parsed = JSON.parse(accumulated)
+                            for (var k in parsed)
+                                result[k] = parsed[k]
+                        } catch(e) {
+                            console.log("DeepSeek: failed to parse streamed JSON:", e.message)
+                        }
+                        finished(result)
                     } else if (xhr.status === 401) {
                         error("Invalid DeepSeek API key")
                     } else if (xhr.status === 429) {
@@ -134,14 +149,18 @@ QtObject {
                 if (xhr.status === 200) {
                     try {
                         var resp = JSON.parse(xhr.responseText)
-                        var translation = resp.choices && resp.choices[0]
+                        var content = resp.choices && resp.choices[0]
                             ? resp.choices[0].message.content.trim()
                             : ""
-                        finished({
-                            translation: translation,
-                            model: resp.model || model,
-                            usage: resp.usage || null
-                        })
+                        var result = { translation: content }
+                        try {
+                            var parsed = JSON.parse(content)
+                            for (var k in parsed)
+                                result[k] = parsed[k]
+                        } catch(e) {
+                            console.log("DeepSeek: failed to parse non-stream JSON:", e.message)
+                        }
+                        finished(result)
                     } catch (e) {
                         error("Failed to parse DeepSeek response: " + e.message)
                     }
