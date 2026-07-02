@@ -129,11 +129,11 @@ PlasmoidItem {
     }
 
     // ── History cache (DB-backed, used for duplicate detection) ─
-    function _getCachedHistory(text) {
+    function _getCachedHistory(text, sourceLang, targetLang) {
         try {
             var json = pasteSelectionHelper.proc.exec(
-                "SELECT id, result_json FROM translations WHERE (input_text=? OR cleaned_input=?) AND (engine='deepseek' OR engine='siliconflow') ORDER BY created_at DESC LIMIT 1",
-                JSON.stringify([text, text])
+                "SELECT id, result_json FROM translations WHERE (input_text=? OR cleaned_input=?) AND source_lang=? AND target_lang=? AND (engine='deepseek' OR engine='siliconflow') ORDER BY created_at DESC LIMIT 1",
+                JSON.stringify([text, text, sourceLang, targetLang])
             )
             var rows = JSON.parse(json)
             if (rows.length > 0) {
@@ -259,7 +259,7 @@ PlasmoidItem {
             dictionaryService.fetch(inputText)
         } else if (mode === "siliconflow") {
             // siliconflow — check history cache first
-            var cached = _getCachedHistory(inputText)
+            var cached = _getCachedHistory(inputText, root.sourceLang, root.targetLang)
             if (cached) {
                 pasteSelectionHelper.proc.exec(
                     "UPDATE translations SET created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
@@ -278,7 +278,7 @@ PlasmoidItem {
             }
         } else {
             // deepseek — check history cache first
-            var cached = _getCachedHistory(inputText)
+            var cached = _getCachedHistory(inputText, root.sourceLang, root.targetLang)
             if (cached) {
                 // Found in history: display from cache, no API call
                 pasteSelectionHelper.proc.exec(

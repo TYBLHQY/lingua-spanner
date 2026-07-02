@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Target:** Plasma 6.0+
 - **Plugin ID:** `org.kde.lingua-spanner`
 - **License:** GPL-2.0+
+- **Language:** QML (primary) + C++ (QClipboard PRIMARY listener, SQLite, config persistence)
+- **Config:** KConfig XT (`main.xml`) for plugin-scoped keys, plus a separate JSON config file (`~/.config/linguaspanner/linguaspanner.json`) for UI state (mode/lang selections) via ProcessHelper C++ API
 
 ## Directory Structure
 
@@ -51,7 +53,34 @@ lingua-spanner/
 
 ### Pure QML Plasmoid (primary)
 
-All translation logic is pure QML. A small C++ helper module (`ProcessHelper`) provides PRIMARY selection reading via `QClipboard`.
+All translation logic is pure QML. A small C++ helper module (`ProcessHelper`) provides:
+- PRIMARY selection reading via `QClipboard`
+- SQLite persistence (`translations` table at `~/.config/linguaspanner/linguaspanner.db`) — AI translation cache
+- JSON config persistence (`~/.config/linguaspanner/linguaspanner.json`) — sourceLang/targetLang/currentMode across sessions
+
+### Translation DB schema
+
+```sql
+CREATE TABLE translations (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  input_text    TEXT    NOT NULL,
+  cleaned_input TEXT    NOT NULL DEFAULT '',
+  engine        TEXT    NOT NULL,
+  source_lang   TEXT    NOT NULL DEFAULT '',
+  target_lang   TEXT    NOT NULL DEFAULT '',
+  result_json   TEXT    NOT NULL DEFAULT '{}',
+  created_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S','now'))
+);
+```
+
+Cache lookups match on (input_text OR cleaned_input) + source_lang + target_lang + engine family (deepseek/siliconflow). Mismatch in any condition triggers a new API call.
+
+### Dual config system
+
+| Scope | Storage | Backend | Content |
+|-------|---------|---------|---------|
+| **Plugin settings** | KConfig XT (`main.xml`) | Plasma/KConfig | API keys, models, temperature, shortcuts, font size |
+| **UI state** | `linguaspanner.json` JSON file | ProcessHelper C++ | sourceLang, targetLang, currentMode (persists across Plasma sessions independently) |
 
 | Service | API | Backend |
 |---------|-----|---------|
@@ -60,15 +89,16 @@ All translation logic is pure QML. A small C++ helper module (`ProcessHelper`) p
 | `YoudaoWebNewService.qml` | `GET dict.youdao.com/result?word=X&lang=en` | Dictionary scraping, regex HTML parse |
 | `FreeDictionaryApiService.qml` | `GET api.dictionaryapi.dev/api/v2/entries/en/X` | English definitions (no key) |
 
-### Activation
+### Activation lifecycle
 
-Shortcut/click → `handlePanelOpened()`:
-1. **Keyboard shortcut**: reads PRIMARY selection asynchronously → freshness check (must be within 1s of last `QClipboard::changed(Selection)` signal) → paste + translate; otherwise focus input.
-2. **Click**: toggle panel, focus input only — never reads selection.
+`onExpandedChanged` / `Component.onCompleted` → `handlePanelOpened()`:
+1. **Keyboard shortcut** (`_openedByClick=false`): reads PRIMARY selection via QClipboard → freshness check (`elapsed <= 1000` ms since `QClipboard::changed(Selection)`) → paste + translate; fall through to focus input if stale or empty.
+2. **Click** (`_openedByClick=true`): toggle panel, focus input only — never reads selection.
+3. **Panel close**: resets `_openedByClick` flag so next shortcut path works.
 
 ### Config pipeline
 
-`main.xml` (KConfig XT) → `config.qml` (shell) → `ConfigGeneral.qml` (actual widget). Config keys like `modeOrder`, `modeEnabled`, `fontSizeBase` are JSON strings parsed in QML. AI model lists (`deepseekModelList`, `siliconFlowModelList`) are cached JSON from model-list API fetches.
+`main.xml` (KConfig XT) → `config.qml` (shell) → `ConfigGeneral.qml` (actual 630-line settings widget). Config keys like `modeOrder`, `modeEnabled`, `fontSizeBase` are JSON strings parsed in QML. AI model lists (`deepseekModelList`, `siliconFlowModelList`) are cached JSON from model-list API fetches — `ConfigGeneral.qml` auto-fetches available models from each provider when the API key is entered.
 
 ### Selection freshness (`ProcessHelper`)
 
@@ -77,9 +107,14 @@ Shortcut/click → `handlePanelOpened()`:
 ## Development
 
 ```sh
+# Convenience script (alternative to make)
+./dev status         # same as make status
+./dev build | full | qml | install | test | restart
+
 # Info
 make status          # git log, plasmoid install status, module file info
-make configure       # cmake configure (first time after clone)
+make configure       # cmake configure (needed once after clone)
+make clean           # remove build directory
 
 # Iterate
 make build           # cmake --build + stage .so to package (C++ changes)
@@ -89,12 +124,18 @@ make test            # install + plasmawindowed preview (no shell restart)
 make restart         # kquitapp6 + plasmashell --replace
 
 # Tests
-qml6 -I package/contents/lib tests/tst_ProcessHelper.qml   # Unit tests
-qml6 -I package/contents/lib tests/diagnostic.qml          # Interactive diagnostics
+qml6 -I package/contents/lib tests/tst_ProcessHelper.qml   # C++ QML module unit tests
+qml6 -I package/contents/lib tests/diagnostic.qml          # Interactive diagnostics UI
 
 # Debug
 journalctl -f -o cat | grep -E "ProcessHelper|qml:"       # Plasmoid logs
 ```
+
+### Code conventions
+
+- **Language**: All user-facing strings use Chinese comments; English for internal logic.
+- **Streaming AI services**: Both DeepSeekService and SiliconFlowService support SSE streaming — the QML parses SSE `data:` lines manually from XMLHttpRequest responseText using a line-buffer pattern with `lastParsedLen` tracking.
+- **Result JSON schema**: AI services return JSON with `{"translate","source_lang","target_lang","cleaned_input","words":[{...}],"frequently":[{...}]}`. POS tags use lowercase abbreviated forms (v, n, adj, adv, etc.).
 
 ## Commit workflow
 

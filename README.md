@@ -10,9 +10,10 @@
 - **流式输出**: DeepSeek / SiliconFlow 支持 SSE 流式逐字输出
 - **一键取词**: Plasma 全局快捷键 — 自动读取选中文本、粘贴并翻译
 - **智能选区新鲜度**: 通过 `QClipboard::selectionChanged()` 检测选区新鲜度，仅采纳 3 秒内的主动选中
-- **翻译历史**: AI 翻译自动缓存历史记录（内存，上限 20 条，可删除）
-- **配置灵活**: API Key、模型选择、Temperature/Top-P/MaxTokens、自定义 System Prompt、字体大小均可配置
+- **翻译历史**: AI 翻译自动缓存历史记录（SQLite 持久化，可复用同文本同语言对的翻译结果）
+- **配置灵活**: API Key、模型选择、Temperature/Top-P/MaxTokens、自定义字体大小、引擎排序均可配置
 - **引擎排序**: 配置页支持启用/禁用和拖拽排序各翻译引擎
+- **语言对选择**: DeepSeek / SiliconFlow 模式支持手动指定源语言和目标语言，或自动检测
 
 ## 引擎
 
@@ -37,6 +38,10 @@ make install      # build + install + restart
 ## 开发
 
 ```sh
+# 便捷脚本
+./dev status          # 查看状态
+./dev build | full | qml | install | test | restart
+
 # 快速迭代（QML 改动）
 make qml          # kpackagetool6 -u + restart
 
