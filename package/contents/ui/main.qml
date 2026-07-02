@@ -1337,6 +1337,7 @@ PlasmoidItem {
                                                 textFormat: modelData.rich ? Text.StyledText : Text.PlainText
                                                 wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
                                                 Layout.fillWidth: modelData.fillWidth || false
+                                                Layout.alignment: Qt.AlignTop
                                             }
                                         }
                                     }
@@ -1401,6 +1402,7 @@ PlasmoidItem {
                                                 textFormat: modelData.rich ? Text.StyledText : Text.PlainText
                                                 wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
                                                 Layout.fillWidth: modelData.fillWidth || false
+                                                Layout.alignment: Qt.AlignTop
                                             }
                                         }
                                     }
