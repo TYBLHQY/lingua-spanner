@@ -1089,6 +1089,14 @@ PlasmoidItem {
                                 spacing: Kirigami.Units.smallSpacing
 
                                 // ── Translation ──────────────
+                                PlasmaComponents3.Label {
+                                    text: i18n("翻译")
+                                    font.bold: true
+                                    font.pixelSize: root.fontSizeSmall
+                                    color: Kirigami.Theme.neutralTextColor
+                                    Layout.alignment: Qt.AlignHCenter
+                                }
+
                                 TextEdit {
                                     text: root.grayBrackets(root.aiResult ? root.aiResult.translate || root.streamingTranslation : "")
                                     textFormat: TextEdit.RichText
@@ -1107,16 +1115,12 @@ PlasmoidItem {
                                     Layout.fillWidth: true
                                     spacing: 2
 
-                                    Rectangle {
-                                        Layout.fillWidth: true; height: 1
-                                        color: Kirigami.Theme.disabledTextColor
-                                    }
-
                                     PlasmaComponents3.Label {
                                         text: i18n("词汇分析")
                                         font.bold: true
                                         font.pixelSize: root.fontSizeSmall
                                         color: Kirigami.Theme.neutralTextColor
+                                        Layout.alignment: Qt.AlignHCenter
                                         Layout.topMargin: Kirigami.Units.smallSpacing
                                         Layout.bottomMargin: Kirigami.Units.smallSpacing
                                     }
@@ -1162,16 +1166,12 @@ PlasmoidItem {
                                     Layout.fillWidth: true
                                     spacing: 2
 
-                                    Rectangle {
-                                        Layout.fillWidth: true; height: 1
-                                        color: Kirigami.Theme.disabledTextColor
-                                    }
-
                                     PlasmaComponents3.Label {
                                         text: i18n("常用搭配")
                                         font.bold: true
                                         font.pixelSize: root.fontSizeSmall
                                         color: Kirigami.Theme.neutralTextColor
+                                        Layout.alignment: Qt.AlignHCenter
                                         Layout.topMargin: Kirigami.Units.smallSpacing
                                         Layout.bottomMargin: Kirigami.Units.smallSpacing
                                     }
@@ -1188,7 +1188,7 @@ PlasmoidItem {
                                                 text: modelData.phrase || ""
                                                 font.pixelSize: root.fontSizeBase
                                                 font.family: root.fontFamily || undefined
-                                                font.italic: true
+                                                font.bold: true
                                             }
 
                                             TextEdit {
