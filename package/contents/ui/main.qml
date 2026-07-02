@@ -39,6 +39,9 @@ PlasmoidItem {
     readonly property int fontSizeSmall: Math.max(6, fontSizeBase - 2)
     readonly property int fontSizeSecondary: Math.max(6, fontSizeBase - 1)
 
+    // ── Custom font family (empty = system default) ─────────
+    readonly property string fontFamily: Plasmoid.configuration.fontFamily || ""
+
     // -- Language pair (AI modes only) -------------------------
     property string sourceLang: "auto"
     property string targetLang: "auto"
@@ -476,6 +479,7 @@ PlasmoidItem {
                         id: inputField
                         Layout.fillWidth: true
                         placeholderText: i18n("Enter text to translate…")
+                        font.family: root.fontFamily || undefined
                         onAccepted: {
                             root.translate(text)
                             selectAll()
@@ -848,6 +852,7 @@ PlasmoidItem {
                                                 textFormat: TextEdit.RichText
                                                 wrapMode: TextEdit.WordWrap
                                                 font.pixelSize: root.fontSizeSecondary
+                                                font.family: root.fontFamily || undefined
                                                 readOnly: true
                                                 selectByMouse: true
                                                 height: contentHeight
@@ -1002,6 +1007,7 @@ PlasmoidItem {
                                                 textFormat: TextEdit.RichText
                                                 wrapMode: TextEdit.WordWrap
                                                 font.pixelSize: root.fontSizeSecondary
+                                                font.family: root.fontFamily || undefined
                                                 readOnly: true
                                                 selectByMouse: true
                                                 height: contentHeight
@@ -1066,6 +1072,7 @@ PlasmoidItem {
                                     : i18n("Waiting for response…")
                                 textFormat: TextEdit.RichText
                                 font.pixelSize: root.fontSizeBase
+                                font.family: root.fontFamily || undefined
                                 wrapMode: TextEdit.WordWrap
                                 Layout.fillWidth: true
                                 readOnly: true
@@ -1086,6 +1093,7 @@ PlasmoidItem {
                                     text: root.grayBrackets(root.aiResult ? root.aiResult.translate || root.streamingTranslation : "")
                                     textFormat: TextEdit.RichText
                                     font.pixelSize: root.fontSizeLarge
+                                    font.family: root.fontFamily || undefined
                                     wrapMode: TextEdit.WordWrap
                                     Layout.fillWidth: true
                                     readOnly: true
@@ -1125,22 +1133,19 @@ PlasmoidItem {
                                                 text: modelData.word || ""
                                                 font.bold: true
                                                 font.pixelSize: root.fontSizeBase
-                                                Layout.preferredWidth: 100
-                                                Layout.maximumWidth: 100
                                             }
 
                                             PlasmaComponents3.Label {
                                                 text: modelData.pos || ""
                                                 font.pixelSize: root.fontSizeSmall
                                                 color: Kirigami.Theme.neutralTextColor
-                                                Layout.preferredWidth: 60
-                                                Layout.maximumWidth: 60
                                             }
 
                                             TextEdit {
                                                 text: root.grayBrackets(modelData.meaning || "")
                                                 textFormat: TextEdit.RichText
                                                 font.pixelSize: root.fontSizeBase
+                                                font.family: root.fontFamily || undefined
                                                 wrapMode: TextEdit.WordWrap
                                                 Layout.fillWidth: true
                                                 readOnly: true
@@ -1182,15 +1187,15 @@ PlasmoidItem {
                                             PlasmaComponents3.Label {
                                                 text: modelData.phrase || ""
                                                 font.pixelSize: root.fontSizeBase
+                                                font.family: root.fontFamily || undefined
                                                 font.italic: true
-                                                Layout.preferredWidth: 150
-                                                Layout.maximumWidth: 150
                                             }
 
                                             TextEdit {
                                                 text: root.grayBrackets(modelData.translation || "")
                                                 textFormat: TextEdit.RichText
                                                 font.pixelSize: root.fontSizeBase
+                                                font.family: root.fontFamily || undefined
                                                 wrapMode: TextEdit.WordWrap
                                                 Layout.fillWidth: true
                                                 readOnly: true

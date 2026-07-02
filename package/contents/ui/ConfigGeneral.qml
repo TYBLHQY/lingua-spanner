@@ -49,6 +49,9 @@ KCMUtils.SimpleKCM {
     property alias cfg_fontSizeBase: fontSizeSpin.value
     property int cfg_fontSizeBaseDefault: 14
 
+    property string cfg_fontFamily: ""
+    property string cfg_fontFamilyDefault: ""
+
     // ── Helper: persist/restore model lists as JSON strings ──
     function parseModelList(json, fallback) {
         if (!json) return fallback
@@ -558,6 +561,55 @@ KCMUtils.SimpleKCM {
                 stepSize: 1
                 editable: true
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+            }
+
+            PlasmaComponents3.Label {
+                text: i18n("Font Family:")
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+
+                QQC2.ComboBox {
+                    id: fontFamilyCombo
+                    editable: true
+                    Layout.fillWidth: true
+
+                    // Guard against initial editText change
+                    property bool _ready: false
+
+                    Component.onCompleted: {
+                        model = Qt.fontFamilies()
+                        // Restore saved font family
+                        var saved = page.cfg_fontFamily
+                        if (saved && saved.length > 0) {
+                            var idx = find(saved)
+                            if (idx >= 0) {
+                                currentIndex = idx
+                            } else {
+                                editText = saved
+                            }
+                        }
+                        _ready = true
+                    }
+
+                    onEditTextChanged: {
+                        if (_ready)
+                            page.cfg_fontFamily = editText
+                    }
+                }
+
+                QQC2.Button {
+                    icon.name: "edit-clear"
+                    implicitWidth: Kirigami.Units.iconSizes.medium
+                    implicitHeight: Kirigami.Units.iconSizes.medium
+                    flat: true
+                    Accessible.name: i18n("Reset to default font")
+                    onClicked: {
+                        fontFamilyCombo.editText = ""
+                        page.cfg_fontFamily = ""
+                    }
+                }
             }
         }
 
