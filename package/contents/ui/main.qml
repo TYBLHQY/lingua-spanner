@@ -85,8 +85,8 @@ PlasmoidItem {
     function _getCachedHistory(text) {
         try {
             var json = pasteSelectionHelper.proc.exec(
-                "SELECT id, result_json FROM translations WHERE input_text=? AND (engine='deepseek' OR engine='siliconflow') ORDER BY created_at DESC LIMIT 1",
-                JSON.stringify([text])
+                "SELECT id, result_json FROM translations WHERE (input_text=? OR cleaned_input=?) AND (engine='deepseek' OR engine='siliconflow') ORDER BY created_at DESC LIMIT 1",
+                JSON.stringify([text, text])
             )
             var rows = JSON.parse(json)
             if (rows.length > 0) {
@@ -108,8 +108,8 @@ PlasmoidItem {
             var cleaned = result.cleaned_input || root.inputText
             var jsonStr = JSON.stringify(result)
             pasteSelectionHelper.proc.exec(
-                "INSERT INTO translations(input_text,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?)",
-                JSON.stringify([cleaned, engine, srcLang, tgtLang, jsonStr])
+                "INSERT INTO translations(input_text,cleaned_input,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?,?)",
+                JSON.stringify([root.inputText, cleaned, engine, srcLang, tgtLang, jsonStr])
             )
         } catch (e) {
             console.log("DB insert failed:", e)
@@ -189,7 +189,9 @@ PlasmoidItem {
     // ── Translation handler ─────────────────────────────────
     function translate(text) {
         if (!text || text.trim().length === 0) return
-        inputText = text.trim()
+        var t = text.trim()
+        if (root.translating && root.inputText === t) return
+        inputText = t
         translating = true
         errorMessage = ""
         youdaoResult = null

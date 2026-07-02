@@ -78,15 +78,30 @@ void ProcessHelper::initDb()
     q.exec(QStringLiteral("DROP TABLE IF EXISTS results"));
     q.exec(QStringLiteral(
         "CREATE TABLE IF NOT EXISTS translations ("
-        "  id          INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "  input_text  TEXT    NOT NULL,"
-        "  engine      TEXT    NOT NULL,"
-        "  source_lang TEXT    NOT NULL DEFAULT '',"
-        "  target_lang TEXT    NOT NULL DEFAULT '',"
-        "  result_json TEXT    NOT NULL DEFAULT '{}',"
-        "  created_at  TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S','now'))"
+        "  id            INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  input_text    TEXT    NOT NULL,"
+        "  cleaned_input TEXT    NOT NULL DEFAULT '',"
+        "  engine        TEXT    NOT NULL,"
+        "  source_lang   TEXT    NOT NULL DEFAULT '',"
+        "  target_lang   TEXT    NOT NULL DEFAULT '',"
+        "  result_json   TEXT    NOT NULL DEFAULT '{}',"
+        "  created_at    TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S','now'))"
         ")"
     ));
+
+    // Migrate existing databases that lack the cleaned_input column
+    QSqlQuery pragma(q);
+    pragma.exec(QStringLiteral("PRAGMA table_info(translations)"));
+    bool hasCleanedInput = false;
+    while (pragma.next()) {
+        if (pragma.value(1).toString() == QLatin1String("cleaned_input")) {
+            hasCleanedInput = true;
+            break;
+        }
+    }
+    if (!hasCleanedInput) {
+        q.exec(QStringLiteral("ALTER TABLE translations ADD COLUMN cleaned_input TEXT NOT NULL DEFAULT ''"));
+    }
 }
 
 QString ProcessHelper::configFilePath() const
