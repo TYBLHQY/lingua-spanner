@@ -81,26 +81,62 @@ PlasmoidItem {
     property string streamingTranslation: ""
     property string streamingInput: ""
 
-    // ── DeepSeek history (in-memory) ────────────────────────
-    property var dsHistory: []
+    // ── DeepSeek history (DB-backed) ─────────────────────────
+    property var dbHistory: []
 
-    function addHistory(input, translation) {
-        var entry = findInHistory(input)
-        if (entry) {
-            entry.translation = translation
-            promoteHistory(entry)
-        } else {
-            entry = { input: input, translation: translation }
-            dsHistory.unshift(entry)
-            promoteHistory(entry)
+    function _refreshHistory() {
+        try {
+            var json = pasteSelectionHelper.proc.exec(
+                "SELECT id, input_text, result_json FROM translations WHERE (engine='deepseek' OR engine='siliconflow') ORDER BY created_at DESC LIMIT 20",
+                "[]"
+            )
+            var rows = JSON.parse(json)
+            var history = []
+            for (var i = 0; i < rows.length; i++) {
+                var r = rows[i]
+                var parsed = JSON.parse(r.result_json || "{}")
+                history.push({
+                    id: r.id,
+                    input: r.input_text,
+                    translation: parsed.translate || ""
+                })
+            }
+            root.dbHistory = history
+        } catch (e) {
+            console.log("_refreshHistory failed:", e)
         }
     }
 
+    function _getCachedHistory(text) {
+        try {
+            var json = pasteSelectionHelper.proc.exec(
+                "SELECT id, result_json FROM translations WHERE input_text=? AND (engine='deepseek' OR engine='siliconflow') ORDER BY created_at DESC LIMIT 1",
+                JSON.stringify([text])
+            )
+            var rows = JSON.parse(json)
+            if (rows.length > 0) {
+                var parsed = JSON.parse(rows[0].result_json || "{}")
+                return {
+                    id: rows[0].id,
+                    translation: parsed.translate || ""
+                }
+            }
+        } catch (e) {}
+        return null
+    }
+
     function deleteHistory(index) {
-        dsHistory.splice(index, 1)
-        var tmp = dsHistory
-        dsHistory = []
-        dsHistory = tmp
+        try {
+            var entry = root.dbHistory[index]
+            if (!entry) return
+            pasteSelectionHelper.proc.exec(
+                "DELETE FROM translations WHERE id=?",
+                JSON.stringify([entry.id])
+            )
+            root._refreshHistory()
+        } catch (e) {
+            console.log("deleteHistory failed:", e)
+        }
     }
 
     // ── DB insert helper ─────────────────────────────────────
@@ -108,10 +144,11 @@ PlasmoidItem {
         try {
             var srcLang = result.source_lang || root.sourceLang
             var tgtLang = result.target_lang || root.targetLang
+            var cleaned = result.cleaned_input || root.inputText
             var jsonStr = JSON.stringify(result)
             pasteSelectionHelper.proc.exec(
                 "INSERT INTO translations(input_text,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?)",
-                JSON.stringify([root.inputText, engine, srcLang, tgtLang, jsonStr])
+                JSON.stringify([cleaned, engine, srcLang, tgtLang, jsonStr])
             )
         } catch (e) {
             console.log("DB insert failed:", e)
@@ -210,9 +247,13 @@ PlasmoidItem {
             dictionaryService.fetch(inputText)
         } else if (mode === "siliconflow") {
             // siliconflow — check history cache first
-            var cached = findInHistory(inputText)
+            var cached = _getCachedHistory(inputText)
             if (cached) {
-                promoteHistory(cached)
+                pasteSelectionHelper.proc.exec(
+                    "UPDATE translations SET created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
+                    JSON.stringify([cached.id])
+                )
+                Qt.callLater(root._refreshHistory)
                 translating = false
             } else if (!siliconFlowApiKey) {
                 errorMessage = i18n("SiliconFlow API key not configured")
@@ -223,10 +264,14 @@ PlasmoidItem {
             }
         } else {
             // deepseek — check history cache first
-            var cached = findInHistory(inputText)
+            var cached = _getCachedHistory(inputText)
             if (cached) {
                 // Found in history: display from cache, no API call
-                promoteHistory(cached)
+                pasteSelectionHelper.proc.exec(
+                    "UPDATE translations SET created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
+                    JSON.stringify([cached.id])
+                )
+                Qt.callLater(root._refreshHistory)
                 translating = false
             } else if (!deepseekApiKey) {
                 errorMessage = i18n("DeepSeek API key not configured")
@@ -238,35 +283,7 @@ PlasmoidItem {
         }
     }
 
-    // ── History helpers ──────────────────────────────────
-    function findInHistory(text) {
-        for (var i = 0; i < dsHistory.length; i++) {
-            if (dsHistory[i].input === text) return dsHistory[i]
-        }
-        return null
-    }
-
-    function promoteHistory(entry) {
-        // Remove from current position
-        for (var i = 0; i < dsHistory.length; i++) {
-            if (dsHistory[i] === entry) {
-                dsHistory.splice(i, 1)
-                break
-            }
-        }
-        // Add to front as NEW
-        entry.isNew = true
-        dsHistory.unshift(entry)
-        // Others become HISTORY
-        for (i = 1; i < dsHistory.length; i++) {
-            dsHistory[i].isNew = false
-        }
-        if (dsHistory.length > 20) dsHistory.length = 20
-        // Force QML re-evaluation
-        var tmp = dsHistory
-        dsHistory = []
-        dsHistory = tmp
-    }
+    // ── History helpers (DB-backed, see _refreshHistory / _getCachedHistory) ─
 
     // ── Pick text from focused window when panel opens ────
     onExpandedChanged: {
@@ -283,6 +300,7 @@ PlasmoidItem {
     // Also handle initial load (plasmawindowed starts expanded)
     Component.onCompleted: {
         pasteSelectionHelper.proc.initDb()
+        root._refreshHistory()
         console.log("Component.onCompleted: expanded=", root.expanded)
         root._loadUiConfig()
         if (root.expanded) {
@@ -360,8 +378,8 @@ PlasmoidItem {
             streamingTranslation = ""
             streamingInput = ""
             if (result.translation) {
-                root.addHistory(inputText, result.translation)
                 root._insertTranslation("deepseek", result)
+                Qt.callLater(root._refreshHistory)
             }
         }
         onError: function(msg) {
@@ -397,8 +415,8 @@ PlasmoidItem {
             streamingTranslation = ""
             streamingInput = ""
             if (result.translation) {
-                root.addHistory(inputText, result.translation)
                 root._insertTranslation("siliconflow", result)
+                Qt.callLater(root._refreshHistory)
             }
         }
         onError: function(msg) {
@@ -1117,7 +1135,7 @@ PlasmoidItem {
                     // ── AI engine history (DeepSeek / SiliconFlow) ──
                     Repeater {
                         id: histRepeater
-                        model: (root.currentMode === "deepseek" || root.currentMode === "siliconflow") ? root.dsHistory : []
+                        model: (root.currentMode === "deepseek" || root.currentMode === "siliconflow") ? root.dbHistory : []
 
                         delegate: Rectangle {
                             required property int index
@@ -1141,13 +1159,6 @@ PlasmoidItem {
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: Kirigami.Units.smallSpacing
-
-                                    PlasmaComponents3.Label {
-                                        text: modelData.isNew ? i18n("[NEW]") : i18n("[HISTORY]")
-                                        font.bold: true
-                                        font.pixelSize: root.fontSizeSmall
-                                        color: modelData.isNew ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.neutralTextColor
-                                    }
 
                                     Item { Layout.fillWidth: true }
 
