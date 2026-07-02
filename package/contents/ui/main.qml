@@ -138,6 +138,16 @@ PlasmoidItem {
         return m
     }
 
+    // Whether any Youdao definition has a non-empty POS label
+    readonly property bool _youdaoHasPo: {
+        if (!root.youdaoResult || !root.youdaoResult.exp) return false
+        for (var i = 0; i < root.youdaoResult.exp.length; i++) {
+            if (root.youdaoResult.exp[i].po && root.youdaoResult.exp[i].po.length > 0)
+                return true
+        }
+        return false
+    }
+
     // ── History cache (DB-backed, used for duplicate detection) ─
     function _getCachedHistory(text, sourceLang, targetLang) {
         try {
@@ -959,11 +969,13 @@ PlasmoidItem {
                                 Layout.fillWidth: true
                                 spacing: 2
 
+                                // With POS → 2-column grid
                                 GridLayout {
                                     columns: 2
                                     columnSpacing: Kirigami.Units.largeSpacing
                                     rowSpacing: Kirigami.Units.smallSpacing
                                     Layout.fillWidth: true
+                                    visible: root._youdaoHasPo
 
                                     // Headers
                                     PlasmaComponents3.Label {
@@ -1002,6 +1014,40 @@ PlasmoidItem {
                                             wrapMode: modelData.role === "tr" ? Text.WordWrap : Text.NoWrap
                                             Layout.fillWidth: modelData.role === "tr"
                                             Layout.alignment: modelData.role === "po" ? Qt.AlignTop : Qt.AlignVCenter
+                                        }
+                                    }
+                                }
+
+                                // No POS → simple list
+                                ColumnLayout {
+                                    visible: !root._youdaoHasPo
+                                    Layout.fillWidth: true
+                                    spacing: Kirigami.Units.smallSpacing
+
+                                    Repeater {
+                                        model: root.youdaoResult ? root.youdaoResult.exp : []
+
+                                        delegate: ColumnLayout {
+                                            required property var modelData
+                                            Layout.fillWidth: true
+
+                                            Repeater {
+                                                model: modelData.tr
+
+                                                delegate: TextEdit {
+                                                    required property string modelData
+                                                    Layout.fillWidth: true
+                                                    text: root.grayBrackets(modelData)
+                                                    textFormat: TextEdit.RichText
+                                                    wrapMode: TextEdit.WordWrap
+                                                    font.pixelSize: root.fontSizeBase
+                                                    font.family: root.fontFamily || undefined
+                                                    color: Kirigami.Theme.textColor
+                                                    readOnly: true
+                                                    selectByMouse: true
+                                                    height: contentHeight
+                                                }
+                                            }
                                         }
                                     }
                                 }

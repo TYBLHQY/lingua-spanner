@@ -94,6 +94,29 @@ QtObject {
         var wordExpRegex = /<li[^>]*word-exp[^>]*>.*?class="pos"[^>]*>([\s\S]*?)<\/span>.*?class="trans"[^>]*>([\s\S]*?)<\/span>/gi
         var match
 
+        while ((match = wordExpRegex.exec(html)) !== null) {
+            var po = match[1].trim()
+            var trRaw = match[2].trim()
+
+            // Handle 【名】 prefix
+            if (trRaw.indexOf("【名】") === 0) {
+                po = "名"
+                trRaw = trRaw.substring(3)
+            }
+
+            // Replace ； with <br> for inline line breaks within a single tr entry
+            trRaw = trRaw.replace(/；/g, "<br>")
+
+            var tr = [trRaw.trim()].filter(function(s) { return s.length > 0 })
+            if (po.length > 0 && tr.length > 0) {
+                var key = po + "|" + tr.join(";")
+                if (!seen[key]) {
+                    seen[key] = true
+                    exp.push({ po: po, tr: tr })
+                }
+            }
+        }
+
         // If no English results, try Chinese source: .word-exp-ce
         if (exp.length === 0) {
             var wordExpCeRegex = /<li[^>]*word-exp-ce[^>]*>.*?class="point"[^>]*>([\s\S]*?)<\/a>.*?class="word-exp_tran[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
