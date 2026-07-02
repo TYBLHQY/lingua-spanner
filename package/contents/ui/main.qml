@@ -81,6 +81,9 @@ PlasmoidItem {
     property string streamingTranslation: ""
     property string streamingInput: ""
 
+    // ── Structured AI result (parsed JSON for display) ──────
+    property var aiResult: null
+
     // ── History cache (DB-backed, used for duplicate detection) ─
     function _getCachedHistory(text) {
         try {
@@ -93,7 +96,8 @@ PlasmoidItem {
                 var parsed = JSON.parse(rows[0].result_json || "{}")
                 return {
                     id: rows[0].id,
-                    translation: parsed.translate || ""
+                    translation: parsed.translate || "",
+                    result: parsed
                 }
             }
         } catch (e) {}
@@ -197,6 +201,7 @@ PlasmoidItem {
         youdaoResult = null
         deepseekResult = null
         dictionaryResult = null
+        root.aiResult = null
 
         // Reset streaming state for new translation
         streamingTranslation = ""
@@ -218,6 +223,7 @@ PlasmoidItem {
                 )
                 streamingInput = root.inputText
                 streamingTranslation = cached.translation
+                root.aiResult = cached.result
                 translating = false
             } else if (!siliconFlowApiKey) {
                 errorMessage = i18n("SiliconFlow API key not configured")
@@ -237,6 +243,7 @@ PlasmoidItem {
                 )
                 streamingInput = root.inputText
                 streamingTranslation = cached.translation
+                root.aiResult = cached.result
                 translating = false
             } else if (!deepseekApiKey) {
                 errorMessage = i18n("DeepSeek API key not configured")
@@ -337,6 +344,7 @@ PlasmoidItem {
         onFinished: function(result) {
             translating = false
             if (result.translation) {
+                root.aiResult = result
                 root._insertTranslation("deepseek", result)
             }
         }
@@ -370,6 +378,7 @@ PlasmoidItem {
         onFinished: function(result) {
             translating = false
             if (result.translation) {
+                root.aiResult = result
                 root._insertTranslation("siliconflow", result)
             }
         }
@@ -1004,22 +1013,23 @@ PlasmoidItem {
                         }
                     }
 
-                    // ── DeepSeek streaming result ─────────────────
+                    // ── AI engine result (DeepSeek / SiliconFlow) ──
                     Rectangle {
                         visible: (root.currentMode === "deepseek" || root.currentMode === "siliconflow") && root.streamingInput !== ""
                         Layout.fillWidth: true
                         radius: Kirigami.Units.smallSpacing
                         color: Kirigami.Theme.backgroundColor
-                        implicitHeight: streamCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+                        implicitHeight: resultCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
                         ColumnLayout {
-                            id: streamCol
+                            id: resultCol
                             anchors {
                                 fill: parent
                                 margins: Kirigami.Units.smallSpacing
                             }
                             spacing: Kirigami.Units.smallSpacing
 
+                            // ── Header row ──────────────────────────
                             RowLayout {
                                 Layout.fillWidth: true
                                 spacing: Kirigami.Units.smallSpacing
@@ -1033,7 +1043,7 @@ PlasmoidItem {
 
                                 Item { Layout.fillWidth: true }
 
-                                // ── 流式动画圆点 (仅翻译中显示) ──
+                                // ── Loading dots (only while streaming) ──
                                 Row {
                                     visible: root.translating
                                     spacing: 3
@@ -1047,18 +1057,12 @@ PlasmoidItem {
                                             SequentialAnimation on opacity {
                                                 loops: Animation.Infinite
                                                 running: root.translating
-
                                                 PauseAnimation { duration: 200 * index }
-
                                                 NumberAnimation {
-                                                    from: 0.3; to: 1.0
-                                                    duration: 400
-                                                    easing.type: Easing.InOutQuad
+                                                    from: 0.3; to: 1.0; duration: 400; easing.type: Easing.InOutQuad
                                                 }
                                                 NumberAnimation {
-                                                    from: 1.0; to: 0.3
-                                                    duration: 400
-                                                    easing.type: Easing.InOutQuad
+                                                    from: 1.0; to: 0.3; duration: 400; easing.type: Easing.InOutQuad
                                                 }
                                             }
                                         }
@@ -1066,6 +1070,7 @@ PlasmoidItem {
                                 }
                             }
 
+                            // ── Input text ──────────────────────────
                             PlasmaComponents3.Label {
                                 text: root.streamingInput
                                 font.pixelSize: root.fontSizeSecondary
@@ -1075,16 +1080,152 @@ PlasmoidItem {
                                 visible: root.streamingInput.length > 0
                             }
 
+                            // ═════════════════════════════════════
+                            //  STREAMING MODE — raw text as it arrives
+                            // ═════════════════════════════════════
                             TextEdit {
-                                text: {
-                                    if (root.streamingTranslation !== "")
-                                        return root.grayBrackets(root.streamingTranslation)
-                                    if (root.translating)
-                                        return i18n("Waiting for response…")
-                                    return ""
-                                }
+                                visible: root.translating
+                                text: root.streamingTranslation !== ""
+                                    ? root.grayBrackets(root.streamingTranslation)
+                                    : i18n("Waiting for response…")
                                 textFormat: TextEdit.RichText
                                 font.pixelSize: root.fontSizeBase
+                                wrapMode: TextEdit.WordWrap
+                                Layout.fillWidth: true
+                                readOnly: true
+                                selectByMouse: true
+                                height: contentHeight
+                            }
+
+                            // ═════════════════════════════════════
+                            //  STRUCTURED RESULT — parsed JSON display
+                            // ═════════════════════════════════════
+                            ColumnLayout {
+                                visible: !root.translating && root.aiResult !== null
+                                Layout.fillWidth: true
+                                spacing: Kirigami.Units.smallSpacing
+
+                                // ── Separator ────────────────
+                                Rectangle {
+                                    Layout.fillWidth: true; height: 1
+                                    color: Kirigami.Theme.disabledTextColor
+                                }
+
+                                // ── Translation ──────────────
+                                TextEdit {
+                                    text: root.grayBrackets(root.aiResult ? root.aiResult.translate || root.streamingTranslation : "")
+                                    textFormat: TextEdit.RichText
+                                    font.pixelSize: root.fontSizeLarge
+                                    wrapMode: TextEdit.WordWrap
+                                    Layout.fillWidth: true
+                                    readOnly: true
+                                    selectByMouse: true
+                                    height: contentHeight
+                                }
+
+                                // ── Words (词汇分析) ─────────
+                                ColumnLayout {
+                                    visible: root.aiResult && root.aiResult.words && root.aiResult.words.length > 0
+                                    Layout.fillWidth: true
+                                    spacing: Kirigami.Units.smallSpacing
+
+                                    Rectangle {
+                                        Layout.fillWidth: true; height: 1
+                                        color: Kirigami.Theme.disabledTextColor
+                                    }
+
+                                    PlasmaComponents3.Label {
+                                        text: i18n("词汇分析")
+                                        font.bold: true
+                                        font.pixelSize: root.fontSizeSmall
+                                        color: Kirigami.Theme.neutralTextColor
+                                    }
+
+                                    Repeater {
+                                        model: root.aiResult ? root.aiResult.words : []
+
+                                        delegate: RowLayout {
+                                            required property var modelData
+                                            Layout.fillWidth: true
+                                            spacing: Kirigami.Units.smallSpacing
+
+                                            PlasmaComponents3.Label {
+                                                text: modelData.word || ""
+                                                font.bold: true
+                                                font.pixelSize: root.fontSizeBase
+                                                Layout.minimumWidth: 80
+                                            }
+
+                                            PlasmaComponents3.Label {
+                                                text: modelData.pos || ""
+                                                font.pixelSize: root.fontSizeSmall
+                                                color: Kirigami.Theme.neutralTextColor
+                                                Layout.minimumWidth: 50
+                                            }
+
+                                            TextEdit {
+                                                text: root.grayBrackets(modelData.meaning || "")
+                                                textFormat: TextEdit.RichText
+                                                font.pixelSize: root.fontSizeBase
+                                                wrapMode: TextEdit.WordWrap
+                                                Layout.fillWidth: true
+                                                readOnly: true
+                                                selectByMouse: true
+                                                height: contentHeight
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // ── Frequently (常用搭配) ───
+                                ColumnLayout {
+                                    visible: root.aiResult && root.aiResult.frequently && root.aiResult.frequently.length > 0
+                                    Layout.fillWidth: true
+                                    spacing: Kirigami.Units.smallSpacing
+
+                                    Rectangle {
+                                        Layout.fillWidth: true; height: 1
+                                        color: Kirigami.Theme.disabledTextColor
+                                    }
+
+                                    PlasmaComponents3.Label {
+                                        text: i18n("常用搭配")
+                                        font.bold: true
+                                        font.pixelSize: root.fontSizeSmall
+                                        color: Kirigami.Theme.neutralTextColor
+                                    }
+
+                                    Repeater {
+                                        model: root.aiResult ? root.aiResult.frequently : []
+
+                                        delegate: RowLayout {
+                                            required property var modelData
+                                            Layout.fillWidth: true
+                                            spacing: Kirigami.Units.smallSpacing
+
+                                            PlasmaComponents3.Label {
+                                                text: modelData.phrase || ""
+                                                font.pixelSize: root.fontSizeBase
+                                                font.italic: true
+                                                Layout.minimumWidth: 120
+                                            }
+
+                                            TextEdit {
+                                                text: root.grayBrackets(modelData.translation || "")
+                                                textFormat: TextEdit.RichText
+                                                font.pixelSize: root.fontSizeBase
+                                                wrapMode: TextEdit.WordWrap
+                                                Layout.fillWidth: true
+                                                readOnly: true
+                                                selectByMouse: true
+                                                height: contentHeight
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                                 wrapMode: TextEdit.WordWrap
                                 Layout.fillWidth: true
                                 readOnly: true
