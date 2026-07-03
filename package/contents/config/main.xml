@@ -56,19 +56,5 @@
     <entry name="fontFamily" type="String">
       <default></default>
     </entry>
-
-    <!-- TTS mode configuration -->
-    <entry name="ttsModeOrder" type="String">
-      <default>["edge-tts"]</default>
-    </entry>
-    <entry name="ttsModeEnabled" type="String">
-      <default>["edge-tts"]</default>
-    </entry>
-    <entry name="ttsSpeed" type="Double">
-      <default>1.0</default>
-    </entry>
-    <entry name="ttsDefaultVoice" type="String">
-      <default></default>
-    </entry>
   </group>
 </kcfg>

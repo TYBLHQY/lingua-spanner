@@ -71,15 +71,6 @@ PlasmoidItem {
         "dictionary":  i18n("Free Dictionary API")
     })
 
-    // TTS mode label lookup
-    readonly property var _ttsModeLabels: ({
-        "edge-tts": i18n("Edge TTS")
-    })
-
-    // TTS config shortcuts
-    readonly property var _ttsModeOrder: JSON.parse(Plasmoid.configuration.ttsModeOrder || '["edge-tts"]')
-    readonly property var _ttsModeEnabled: JSON.parse(Plasmoid.configuration.ttsModeEnabled || '["edge-tts"]')
-
     // Currently selected mode (from ComboBox)
     property string currentMode: {
         for (var i = 0; i < root._modeOrder.length; i++)
@@ -87,19 +78,6 @@ PlasmoidItem {
                 return root._modeOrder[i]
         return "youdao"
     }
-
-    // TTS state
-    property string currentTtsMode: {
-        for (var i = 0; i < root._ttsModeOrder.length; i++)
-            if (root._ttsModeEnabled.indexOf(root._ttsModeOrder[i]) >= 0)
-                return root._ttsModeOrder[i]
-        return "edge-tts"
-    }
-    property string ttsInputText: ""
-    property bool ttsPlaying: false
-    property string ttsErrorMessage: ""
-    property string ttsVoice: ""
-    property double ttsSpeed: 1.0
 
     // Translation state
     property string inputText: ""
@@ -301,8 +279,6 @@ PlasmoidItem {
                 root.targetLang = cfg.targetLang
             if (cfg.currentMode && cfg.currentMode !== root.currentMode)
                 root.currentMode = cfg.currentMode
-            if (cfg.currentTtsMode && cfg.currentTtsMode !== root.currentTtsMode)
-                root.currentTtsMode = cfg.currentTtsMode
 
             // Sync mode combo after loading (it init'ed with defaults)
             Qt.callLater(function() {
@@ -318,11 +294,6 @@ PlasmoidItem {
                 for (var i = 0; i < targetLangCombo.model.length; i++)
                     if (targetLangCombo.model[i].value === root.targetLang)
                         { targetLangCombo.currentIndex = i; break }
-                // tts mode combo
-                // tts mode combo
-                for (var i = 0; i < ttsModeCombo.model.length; i++)
-                    if (ttsModeCombo.model[i].value === root.currentTtsMode)
-                        { ttsModeCombo.currentIndex = i; break }
             })
         } catch(e) {}
     }
@@ -381,25 +352,6 @@ PlasmoidItem {
                 deepseekService.translate(inputText, deepseekApiKey, deepseekModel, deepseekStream, deepseekTemperature, deepseekMaxTokens, deepseekTopP, root.sourceLang, root.targetLang)
             }
         }
-    }
-
-    // TTS handler
-    function speak(text) {
-        if (!text || text.trim().length === 0) return
-        ttsPlaying = true
-        ttsErrorMessage = ""
-        var mode = root.currentTtsMode
-        if (mode === "edge-tts") {
-            edgeTtsService.speak(text, root.ttsVoice || "", root.ttsSpeed || 1.0)
-        }
-    }
-
-    function ttsStop() {
-        var mode = root.currentTtsMode
-        if (mode === "edge-tts") {
-            edgeTtsService.stop()
-        }
-        ttsPlaying = false
     }
 
     // Pick text from focused window when panel opens
@@ -536,20 +488,6 @@ PlasmoidItem {
             root.errorMessage = msg
         }
     }
-
-    // TTS services
-    Services.EdgeTtsService {
-        id: edgeTtsService
-        onFinished: {
-            root.ttsPlaying = false
-        }
-        onError: function(msg) {
-            root.ttsPlaying = false
-            root.ttsErrorMessage = msg
-        }
-    }
-
-    // Compact: taskbar icon
     compactRepresentation: Kirigami.Icon {
         source: "translate"
         implicitWidth: Kirigami.Units.iconSizes.small
@@ -721,60 +659,6 @@ PlasmoidItem {
                             }
                         }
 
-                        // TTS mode selector
-                        QQC2.ComboBox {
-                            id: ttsModeCombo
-                            Layout.preferredWidth: Kirigami.Units.gridUnit * 8
-                            model: {
-                                var order = root._ttsModeOrder
-                                var enabled = root._ttsModeEnabled
-                                var items = []
-                                for (var i = 0; i < order.length; i++)
-                                    if (enabled.indexOf(order[i]) >= 0)
-                                        items.push({ text: root._ttsModeLabels[order[i]] || order[i], value: order[i] })
-                                return items
-                            }
-                            textRole: "text"
-                            valueRole: "value"
-
-                            property bool _ready: false
-
-                            Component.onCompleted: {
-                                for (var i = 0; i < model.length; i++) {
-                                    if (model[i].value === root.currentTtsMode) {
-                                        currentIndex = i
-                                        break
-                                    }
-                                }
-                                _ready = true
-                            }
-                            onCurrentValueChanged: {
-                                if (!_ready) return
-                                if (currentValue !== root.currentTtsMode) {
-                                    root.currentTtsMode = currentValue
-                                    root._saveUiConfig({currentTtsMode: root.currentTtsMode})
-                                }
-                            }
-                        }
-
-                        QQC2.Button {
-                            icon.name: root.ttsPlaying ? "media-playback-stop" : "media-playback-start"
-                            implicitWidth: Kirigami.Units.iconSizes.medium
-                            implicitHeight: Kirigami.Units.iconSizes.medium
-                            Accessible.name: root.ttsPlaying ? i18n("Stop") : i18n("Speak")
-                            QQC2.ToolTip {
-                                text: root.ttsPlaying ? i18n("Stop speaking") : i18n("Speak input text")
-                                delay: Kirigami.Units.toolTipDelay
-                                visible: hovered
-                            }
-                            onClicked: {
-                                if (root.ttsPlaying) {
-                                    root.ttsStop()
-                                } else {
-                                    root.speak(inputField.text)
-                                }
-                            }
-                        }
                     }
                 }
 

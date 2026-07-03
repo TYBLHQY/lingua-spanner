@@ -12,9 +12,4 @@ ConfigModel {
         icon: "dialog-password"
         source: "AiConfigCategory.qml"
     }
-    ConfigCategory {
-        name: i18n("Speech")
-        icon: "audio-input-microphone"
-        source: "TtsConfigCategory.qml"
-    }
 }
