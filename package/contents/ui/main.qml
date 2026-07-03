@@ -612,6 +612,7 @@ PlasmoidItem {
                         QQC2.ComboBox {
                             id: modeCombo
                             Layout.fillWidth: true
+                            enabled: !root.translating
 
                             // Build model from enabled modes
                             model: {
