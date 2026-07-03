@@ -72,6 +72,15 @@ PlasmoidItem {
         "dictionary":  i18n("Free Dictionary API")
     })
 
+    // TTS mode label lookup
+    readonly property var _ttsModeLabels: ({
+        "edge-tts": i18n("Edge TTS")
+    })
+
+    // TTS config shortcuts
+    readonly property var _ttsModeOrder: JSON.parse(Plasmoid.configuration.ttsModeOrder || '["edge-tts"]')
+    readonly property var _ttsModeEnabled: JSON.parse(Plasmoid.configuration.ttsModeEnabled || '["edge-tts"]')
+
     // Currently selected mode (from ComboBox)
     property string currentMode: {
         for (var i = 0; i < root._modeOrder.length; i++)
@@ -79,6 +88,19 @@ PlasmoidItem {
                 return root._modeOrder[i]
         return "youdao"
     }
+
+    // TTS state
+    property string currentTtsMode: {
+        for (var i = 0; i < root._ttsModeOrder.length; i++)
+            if (root._ttsModeEnabled.indexOf(root._ttsModeOrder[i]) >= 0)
+                return root._ttsModeOrder[i]
+        return "edge-tts"
+    }
+    property string ttsInputText: ""
+    property bool ttsPlaying: false
+    property string ttsErrorMessage: ""
+    property string ttsVoice: ""
+    property double ttsSpeed: 1.0
 
     // Translation state
     property string inputText: ""
@@ -328,6 +350,8 @@ PlasmoidItem {
                 root.targetLang = cfg.targetLang
             if (cfg.currentMode && cfg.currentMode !== root.currentMode)
                 root.currentMode = cfg.currentMode
+            if (cfg.currentTtsMode && cfg.currentTtsMode !== root.currentTtsMode)
+                root.currentTtsMode = cfg.currentTtsMode
 
             // Sync mode combo after loading (it init'ed with defaults)
             Qt.callLater(function() {
@@ -343,6 +367,11 @@ PlasmoidItem {
                 for (var i = 0; i < targetLangCombo.model.length; i++)
                     if (targetLangCombo.model[i].value === root.targetLang)
                         { targetLangCombo.currentIndex = i; break }
+                // tts mode combo
+                // tts mode combo
+                for (var i = 0; i < ttsModeCombo.model.length; i++)
+                    if (ttsModeCombo.model[i].value === root.currentTtsMode)
+                        { ttsModeCombo.currentIndex = i; break }
             })
         } catch(e) {}
     }
@@ -417,6 +446,25 @@ PlasmoidItem {
                 deepseekService.translate(inputText, deepseekApiKey, deepseekModel, deepseekStream, deepseekTemperature, deepseekMaxTokens, deepseekTopP, root.sourceLang, root.targetLang)
             }
         }
+    }
+
+    // TTS handler
+    function speak(text) {
+        if (!text || text.trim().length === 0) return
+        ttsPlaying = true
+        ttsErrorMessage = ""
+        var mode = root.currentTtsMode
+        if (mode === "edge-tts") {
+            edgeTtsService.speak(text, root.ttsVoice || "", root.ttsSpeed || 1.0)
+        }
+    }
+
+    function ttsStop() {
+        var mode = root.currentTtsMode
+        if (mode === "edge-tts") {
+            edgeTtsService.stop()
+        }
+        ttsPlaying = false
     }
 
     // Pick text from focused window when panel opens
@@ -554,6 +602,18 @@ PlasmoidItem {
         }
     }
 
+    // TTS services
+    Services.EdgeTtsService {
+        id: edgeTtsService
+        onFinished: {
+            root.ttsPlaying = false
+        }
+        onError: function(msg) {
+            root.ttsPlaying = false
+            root.ttsErrorMessage = msg
+        }
+    }
+
     // Compact: taskbar icon
     compactRepresentation: Kirigami.Icon {
         source: "translate"
@@ -623,802 +683,427 @@ PlasmoidItem {
 
             // Input area (replaces former header)
             Item {
-                Layout.fillWidth: true
-                Layout.topMargin: Kirigami.Units.largeSpacing
-                Layout.leftMargin: Kirigami.Units.largeSpacing
-                Layout.rightMargin: Kirigami.Units.largeSpacing
-                implicitHeight: inputRow.implicitHeight
+                    Layout.fillWidth: true
+                    Layout.topMargin: Kirigami.Units.largeSpacing
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.largeSpacing
+                    implicitHeight: inputRow.implicitHeight
 
-                RowLayout {
-                    id: inputRow
-                    anchors.left: parent.left
-                    anchors.right: parent.right
+                    RowLayout {
+                        id: inputRow
+                        anchors.left: parent.left
+                        anchors.right: parent.right
 
-                    QQC2.TextField {
-                        id: inputField
-                        Layout.fillWidth: true
-                        placeholderText: i18n("Enter text to translate…")
-                        font.family: root.fontFamily || undefined
-                        onAccepted: {
-                            root.translate(text)
-                            selectAll()
-                        }
-                        Component.onCompleted: root.p_inputField = inputField
-                    }
-
-                    QQC2.Button {
-                        icon.name: root.pinned ? "window-pin" : "window-unpin"
-                        implicitWidth: Kirigami.Units.iconSizes.medium
-                        implicitHeight: Kirigami.Units.iconSizes.medium
-                        onClicked: root.pinned = !root.pinned
-                        Accessible.name: root.pinned ? i18n("Unpin") : i18n("Pin")
-                        QQC2.ToolTip {
-                            text: root.pinned
-                                ? i18n("Keep open when switching windows")
-                                : i18n("Pin panel open")
-                            delay: Kirigami.Units.toolTipDelay
-                            visible: hovered
-                        }
-                    }
-                }
-            }
-
-            // Translate mode selector
-            Item {
-                Layout.fillWidth: true
-                Layout.leftMargin: Kirigami.Units.largeSpacing
-                Layout.rightMargin: Kirigami.Units.largeSpacing
-                Layout.topMargin: Kirigami.Units.smallSpacing
-                implicitHeight: modeRow.implicitHeight
-
-                RowLayout {
-                    id: modeRow
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-
-                    QQC2.ComboBox {
-                        id: modeCombo
-                        Layout.fillWidth: true
-
-                        // Build model from enabled modes
-                        model: {
-                            var order = root._modeOrder
-                            var enabled = root._modeEnabled
-                            var items = []
-                            for (var i = 0; i < order.length; i++)
-                                if (enabled.indexOf(order[i]) >= 0)
-                                    items.push({ text: root._modeLabels[order[i]] || order[i], value: order[i] })
-                            return items
-                        }
-                        textRole: "text"
-                        valueRole: "value"
-
-                        // Guard to prevent init-time writes to config
-                        property bool _ready: false
-
-                        // Sync from config
-                        Component.onCompleted: {
-                            for (var i = 0; i < model.length; i++) {
-                                if (model[i].value === root.currentMode) {
-                                    currentIndex = i
-                                    break
-                                }
+                        QQC2.TextField {
+                            id: inputField
+                            Layout.fillWidth: true
+                            placeholderText: i18n("Enter text to translate…")
+                            font.family: root.fontFamily || undefined
+                            onAccepted: {
+                                root.translate(text)
+                                selectAll()
                             }
-                            _ready = true
+                            Component.onCompleted: root.p_inputField = inputField
                         }
-                        // Sync on user change
-                        onCurrentValueChanged: {
-                            if (!_ready) return
-                            if (currentValue !== root.currentMode) {
-                                // Clear results
-                                youdaoResult = null
-                                dictionaryResult = null
-                                // Write to local state
-                                root.currentMode = currentValue
-                                root._saveUiConfig({currentMode: root.currentMode})
-                                // Auto-translate if input is not empty
-                                Qt.callLater(function() {
-                                    if (inputField.text.trim().length > 0) {
-                                        root.translate(inputField.text)
-                                    }
-                                })
+
+                        QQC2.Button {
+                            icon.name: root.pinned ? "window-pin" : "window-unpin"
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            onClicked: root.pinned = !root.pinned
+                            Accessible.name: root.pinned ? i18n("Unpin") : i18n("Pin")
+                            QQC2.ToolTip {
+                                text: root.pinned
+                                    ? i18n("Keep open when switching windows")
+                                    : i18n("Pin panel open")
+                                delay: Kirigami.Units.toolTipDelay
+                                visible: hovered
                             }
                         }
                     }
                 }
-            }
 
-            // Language bar (AI modes only)
-            Item {
-                visible: root.currentMode === "deepseek" || root.currentMode === "siliconflow"
-                Layout.fillWidth: true
-                Layout.leftMargin: Kirigami.Units.largeSpacing
-                Layout.rightMargin: Kirigami.Units.largeSpacing
-                Layout.topMargin: Kirigami.Units.smallSpacing
-                implicitHeight: langRow.implicitHeight
+                // Translate mode selector
+                Item {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.largeSpacing
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                    implicitHeight: modeRow.implicitHeight
 
-                RowLayout {
-                    id: langRow
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    spacing: Kirigami.Units.smallSpacing
+                    RowLayout {
+                        id: modeRow
+                        anchors.left: parent.left
+                        anchors.right: parent.right
 
-                    QQC2.ComboBox {
-                        id: sourceLangCombo
-                        Layout.fillWidth: true
-                        model: root._langModel
-                        textRole: "text"
-                        valueRole: "value"
+                        QQC2.ComboBox {
+                            id: modeCombo
+                            Layout.fillWidth: true
 
-                        // Guard to prevent init-time writes to config
-                        property bool _ready: false
+                            // Build model from enabled modes
+                            model: {
+                                var order = root._modeOrder
+                                var enabled = root._modeEnabled
+                                var items = []
+                                for (var i = 0; i < order.length; i++)
+                                    if (enabled.indexOf(order[i]) >= 0)
+                                        items.push({ text: root._modeLabels[order[i]] || order[i], value: order[i] })
+                                return items
+                            }
+                            textRole: "text"
+                            valueRole: "value"
 
-                        Component.onCompleted: {
-                            for (var i = 0; i < model.length; i++)
-                                if (model[i].value === root.sourceLang) {
-                                    currentIndex = i
-                                    break
+                            // Guard to prevent init-time writes to config
+                            property bool _ready: false
+
+                            // Sync from config
+                            Component.onCompleted: {
+                                for (var i = 0; i < model.length; i++) {
+                                    if (model[i].value === root.currentMode) {
+                                        currentIndex = i
+                                        break
+                                    }
                                 }
-                            _ready = true
-                        }
-                        onCurrentValueChanged: {
-                            if (!_ready) return
-                            if (root.sourceLang !== currentValue) {
-                                root.sourceLang = currentValue
-                                root._saveUiConfig({sourceLang: currentValue})
+                                _ready = true
+                            }
+                            // Sync on user change
+                            onCurrentValueChanged: {
+                                if (!_ready) return
+                                if (currentValue !== root.currentMode) {
+                                    // Clear results
+                                    youdaoResult = null
+                                    dictionaryResult = null
+                                    // Write to local state
+                                    root.currentMode = currentValue
+                                    root._saveUiConfig({currentMode: root.currentMode})
+                                    // Auto-translate if input is not empty
+                                    Qt.callLater(function() {
+                                        if (inputField.text.trim().length > 0) {
+                                            root.translate(inputField.text)
+                                        }
+                                    })
+                                }
                             }
                         }
-                    }
 
-                    QQC2.Button {
-                        text: "⇄"
-                        font.pixelSize: root.fontSizeLarge
-                        implicitWidth: Kirigami.Units.iconSizes.medium
-                        implicitHeight: Kirigami.Units.iconSizes.medium
-                        flat: true
-                        Accessible.name: i18n("Swap languages")
-                        onClicked: {
-                            // Swap values
-                            var tmp = root.sourceLang
-                            root.sourceLang = root.targetLang
-                            root.targetLang = tmp
-                            root._saveUiConfig({sourceLang: root.sourceLang, targetLang: root.targetLang})
+                        // TTS mode selector
+                        QQC2.ComboBox {
+                            id: ttsModeCombo
+                            Layout.preferredWidth: Kirigami.Units.gridUnit * 8
+                            model: {
+                                var order = root._ttsModeOrder
+                                var enabled = root._ttsModeEnabled
+                                var items = []
+                                for (var i = 0; i < order.length; i++)
+                                    if (enabled.indexOf(order[i]) >= 0)
+                                        items.push({ text: root._ttsModeLabels[order[i]] || order[i], value: order[i] })
+                                return items
+                            }
+                            textRole: "text"
+                            valueRole: "value"
 
-                            // Update ComboBox visual selection
-                            for (var i = 0; i < sourceLangCombo.model.length; i++)
-                                if (sourceLangCombo.model[i].value === root.sourceLang)
-                                    { sourceLangCombo.currentIndex = i; break }
-                            for (var i = 0; i < targetLangCombo.model.length; i++)
-                                if (targetLangCombo.model[i].value === root.targetLang)
-                                    { targetLangCombo.currentIndex = i; break }
-                        }
-                    }
+                            property bool _ready: false
 
-                    QQC2.ComboBox {
-                        id: targetLangCombo
-                        Layout.fillWidth: true
-                        model: root._langModel
-                        textRole: "text"
-                        valueRole: "value"
-
-                        // Guard to prevent init-time writes to config
-                        property bool _ready: false
-
-                        Component.onCompleted: {
-                            for (var i = 0; i < model.length; i++)
-                                if (model[i].value === root.targetLang) {
-                                    currentIndex = i
-                                    break
+                            Component.onCompleted: {
+                                for (var i = 0; i < model.length; i++) {
+                                    if (model[i].value === root.currentTtsMode) {
+                                        currentIndex = i
+                                        break
+                                    }
                                 }
-                            _ready = true
+                                _ready = true
+                            }
+                            onCurrentValueChanged: {
+                                if (!_ready) return
+                                if (currentValue !== root.currentTtsMode) {
+                                    root.currentTtsMode = currentValue
+                                    root._saveUiConfig({currentTtsMode: root.currentTtsMode})
+                                }
+                            }
                         }
-                        onCurrentValueChanged: {
-                            if (!_ready) return
-                            if (root.targetLang !== currentValue) {
-                                root.targetLang = currentValue
-                                root._saveUiConfig({targetLang: currentValue})
+
+                        QQC2.Button {
+                            icon.name: root.ttsPlaying ? "media-playback-stop" : "media-playback-start"
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            Accessible.name: root.ttsPlaying ? i18n("Stop") : i18n("Speak")
+                            QQC2.ToolTip {
+                                text: root.ttsPlaying ? i18n("Stop speaking") : i18n("Speak input text")
+                                delay: Kirigami.Units.toolTipDelay
+                                visible: hovered
+                            }
+                            onClicked: {
+                                if (root.ttsPlaying) {
+                                    root.ttsStop()
+                                } else {
+                                    root.speak(inputField.text)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Results area
-            QQC2.ScrollView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.topMargin: Kirigami.Units.smallSpacing
-                Layout.leftMargin: Kirigami.Units.largeSpacing
-                Layout.rightMargin: Kirigami.Units.largeSpacing
-                Layout.bottomMargin: Kirigami.Units.largeSpacing
-                clip: true
-                contentWidth: availableWidth
-                QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AlwaysOff
+                // Language bar (AI modes only)
+                Item {
+                    visible: root.currentMode === "deepseek" || root.currentMode === "siliconflow"
+                    Layout.fillWidth: true
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.largeSpacing
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                    implicitHeight: langRow.implicitHeight
 
-                ColumnLayout {
-                    width: parent.width
-                    spacing: Kirigami.Units.smallSpacing
+                    RowLayout {
+                        id: langRow
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        spacing: Kirigami.Units.smallSpacing
 
-                    // Error
-                    PlasmaComponents3.Label {
-                        visible: root.errorMessage !== ""
-                        text: root.errorMessage
-                        color: Kirigami.Theme.negativeTextColor
-                        font.italic: true
-                        wrapMode: Text.WordWrap
-                        Layout.fillWidth: true
-                    }
+                        QQC2.ComboBox {
+                            id: sourceLangCombo
+                            Layout.fillWidth: true
+                            model: root._langModel
+                            textRole: "text"
+                            valueRole: "value"
 
-                    // Youdao result
-                    Rectangle {
-                        visible: youdaoResult !== null
-                        Layout.fillWidth: true
-                        radius: Kirigami.Units.smallSpacing
-                        color: Kirigami.Theme.backgroundColor
-                        implicitHeight: youdaoCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+                            // Guard to prevent init-time writes to config
+                            property bool _ready: false
 
-                        ColumnLayout {
-                            id: youdaoCol
-                            anchors {
-                                fill: parent
-                                margins: Kirigami.Units.smallSpacing
-                            }
-                            spacing: Kirigami.Units.smallSpacing
-
-                            // No result notice
-                            PlasmaComponents3.Label {
-                                visible: youdaoResult && youdaoResult.exp.length === 0
-                                text: i18n("No dictionary results found.")
-                                color: Kirigami.Theme.disabledTextColor
-                                font.italic: true
-                                Layout.fillWidth: true
-                            }
-
-                            // Audio bar
-                            Rectangle {
-                                visible: youdaoResult && youdaoResult.audio && youdaoResult.audio.length > 0
-                                Layout.fillWidth: true
-                                color: Kirigami.Theme.backgroundColor
-                                border.color: Kirigami.Theme.disabledTextColor
-                                border.width: 1
-                                radius: Kirigami.Units.smallSpacing
-                                implicitHeight: audioRow.implicitHeight + Kirigami.Units.smallSpacing
-
-                                RowLayout {
-                                    id: audioRow
-                                    anchors {
-                                        fill: parent
-                                        leftMargin: Kirigami.Units.smallSpacing
-                                        rightMargin: Kirigami.Units.smallSpacing
+                            Component.onCompleted: {
+                                for (var i = 0; i < model.length; i++)
+                                    if (model[i].value === root.sourceLang) {
+                                        currentIndex = i
+                                        break
                                     }
-                                    spacing: Kirigami.Units.smallSpacing
-
-                                    Repeater {
-                                        model: youdaoResult ? youdaoResult.audio : []
-
-                                        delegate: QQC2.Button {
-                                            id: audioBtn
-                                            required property var modelData
-                                            text: modelData.text
-                                            icon.name: "media-playback-start"
-                                            flat: true
-                                            Accessible.name: i18n("Play pronunciation")
-                                            Layout.fillWidth: true
-                                            onClicked: {
-                                                audioPlayer.source = modelData.url
-                                                audioPlayer.play()
-                                            }
-                                        }
-                                    }
-                                }
-
-                                MediaPlayer {
-                                    id: audioPlayer
-                                    audioOutput: AudioOutput {}
-                                    onErrorOccurred: console.log("audioPlayer error:", error, errorString)
-                                    onPlaybackStateChanged: console.log("audioPlayer state:", playbackState)
+                                _ready = true
+                            }
+                            onCurrentValueChanged: {
+                                if (!_ready) return
+                                if (root.sourceLang !== currentValue) {
+                                    root.sourceLang = currentValue
+                                    root._saveUiConfig({sourceLang: currentValue})
                                 }
                             }
+                        }
 
-                            // Exam type tags
-                            Flow {
-                                visible: youdaoResult && youdaoResult.examType && youdaoResult.examType.length > 0
-                                Layout.fillWidth: true
-                                spacing: Kirigami.Units.smallSpacing
+                        QQC2.Button {
+                            text: "⇄"
+                            font.pixelSize: root.fontSizeLarge
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            flat: true
+                            Accessible.name: i18n("Swap languages")
+                            onClicked: {
+                                // Swap values
+                                var tmp = root.sourceLang
+                                root.sourceLang = root.targetLang
+                                root.targetLang = tmp
+                                root._saveUiConfig({sourceLang: root.sourceLang, targetLang: root.targetLang})
 
-                                Repeater {
-                                    model: youdaoResult ? youdaoResult.examType : []
-
-                                    delegate: PlasmaComponents3.Label {
-                                        required property string modelData
-                                        text: modelData
-                                        color: Kirigami.Theme.linkColor
-                                        font.pixelSize: root.fontSizeSmall
-                                    }
-                                }
+                                // Update ComboBox visual selection
+                                for (var i = 0; i < sourceLangCombo.model.length; i++)
+                                    if (sourceLangCombo.model[i].value === root.sourceLang)
+                                        { sourceLangCombo.currentIndex = i; break }
+                                for (var i = 0; i < targetLangCombo.model.length; i++)
+                                    if (targetLangCombo.model[i].value === root.targetLang)
+                                        { targetLangCombo.currentIndex = i; break }
                             }
+                        }
 
-                            // Forms
-                            Flow {
-                                visible: youdaoResult && youdaoResult.form && youdaoResult.form.length > 0
-                                Layout.fillWidth: true
-                                spacing: Kirigami.Units.smallSpacing
+                        QQC2.ComboBox {
+                            id: targetLangCombo
+                            Layout.fillWidth: true
+                            model: root._langModel
+                            textRole: "text"
+                            valueRole: "value"
 
-                                Repeater {
-                                    model: youdaoResult ? youdaoResult.form : []
+                            // Guard to prevent init-time writes to config
+                            property bool _ready: false
 
-                                    delegate: Rectangle {
-                                        required property var modelData
-                                        color: "transparent"
-                                        border.color: Kirigami.Theme.disabledTextColor
-                                        border.width: 1
-                                        radius: Kirigami.Units.smallSpacing
-                                        implicitHeight: formLabel.implicitHeight + Kirigami.Units.smallSpacing
-                                        implicitWidth: formLabel.implicitWidth + Kirigami.Units.smallSpacing + 10
-
-                                        PlasmaComponents3.Label {
-                                            id: formLabel
-                                            anchors.centerIn: parent
-                                            text: modelData.form + " " + modelData.type
-                                            font.pixelSize: root.fontSizeSmall
-                                        }
+                            Component.onCompleted: {
+                                for (var i = 0; i < model.length; i++)
+                                    if (model[i].value === root.targetLang) {
+                                        currentIndex = i
+                                        break
                                     }
-                                }
+                                _ready = true
                             }
-
-                            // Definitions (exp)
-                            ColumnLayout {
-                                visible: youdaoResult && youdaoResult.exp && youdaoResult.exp.length > 0
-                                Layout.fillWidth: true
-                                spacing: 2
-
-                                // With POS → 2-column grid
-                                GridLayout {
-                                    columns: 2
-                                    columnSpacing: Kirigami.Units.largeSpacing
-                                    rowSpacing: Kirigami.Units.smallSpacing
-                                    Layout.fillWidth: true
-                                    visible: root._youdaoHasPo
-
-                                    // Headers
-                                    PlasmaComponents3.Label {
-                                        text: i18n("词性")
-                                        font.bold: true
-                                        font.pixelSize: root.fontSizeSmall
-                                        color: Kirigami.Theme.disabledTextColor
-                                    }
-                                    PlasmaComponents3.Label {
-                                        text: i18n("释义")
-                                        font.bold: true
-                                        font.pixelSize: root.fontSizeSmall
-                                        color: Kirigami.Theme.disabledTextColor
-                                    }
-
-                                    // Separator
-                                    Rectangle {
-                                        Layout.columnSpan: 2
-                                        Layout.fillWidth: true
-                                        height: 1
-                                        color: Kirigami.Theme.disabledTextColor
-                                        opacity: 0.2
-                                    }
-
-                                    // Data cells
-                                    Repeater {
-                                        model: root._flatYoudaoDefModel
-
-                                        delegate: PlasmaComponents3.Label {
-                                            text: modelData.role === "padding" ? "" : modelData.text
-                                            font.bold: modelData.role === "po"
-                                            font.pixelSize: modelData.role === "po" ? root.fontSizeSmall : root.fontSizeBase
-                                            font.family: root.fontFamily || undefined
-                                            color: modelData.role === "po" ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.textColor
-                                            textFormat: modelData.role === "tr" ? Text.StyledText : Text.PlainText
-                                            wrapMode: modelData.role === "tr" ? Text.WordWrap : Text.NoWrap
-                                            Layout.fillWidth: modelData.role === "tr"
-                                            Layout.alignment: modelData.role === "po" ? Qt.AlignTop : Qt.AlignVCenter
-                                        }
-                                    }
-                                }
-
-                                // No POS → simple list
-                                ColumnLayout {
-                                    visible: !root._youdaoHasPo
-                                    Layout.fillWidth: true
-                                    spacing: Kirigami.Units.smallSpacing
-
-                                    Repeater {
-                                        model: root.youdaoResult ? root.youdaoResult.exp : []
-
-                                        delegate: ColumnLayout {
-                                            required property var modelData
-                                            Layout.fillWidth: true
-
-                                            Repeater {
-                                                model: modelData.tr
-
-                                                delegate: TextEdit {
-                                                    required property string modelData
-                                                    Layout.fillWidth: true
-                                                    text: root.grayBrackets(modelData)
-                                                    textFormat: TextEdit.RichText
-                                                    wrapMode: TextEdit.WordWrap
-                                                    font.pixelSize: root.fontSizeBase
-                                                    font.family: root.fontFamily || undefined
-                                                    color: Kirigami.Theme.textColor
-                                                    readOnly: true
-                                                    selectByMouse: true
-                                                    height: contentHeight
-                                                }
-                                            }
-                                        }
-                                    }
+                            onCurrentValueChanged: {
+                                if (!_ready) return
+                                if (root.targetLang !== currentValue) {
+                                    root.targetLang = currentValue
+                                    root._saveUiConfig({targetLang: currentValue})
                                 }
                             }
                         }
                     }
+                }
 
-                    // Free Dictionary API result
-                    Rectangle {
-                        visible: dictionaryResult !== null && root.currentMode === "dictionary"
-                        Layout.fillWidth: true
-                        radius: Kirigami.Units.smallSpacing
-                        color: Kirigami.Theme.backgroundColor
-                        implicitHeight: dictCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+                // Results area
+                QQC2.ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                    Layout.leftMargin: Kirigami.Units.largeSpacing
+                    Layout.rightMargin: Kirigami.Units.largeSpacing
+                    Layout.bottomMargin: Kirigami.Units.largeSpacing
+                    clip: true
+                    contentWidth: availableWidth
+                    QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AlwaysOff
 
-                        ColumnLayout {
-                            id: dictCol
-                            anchors {
-                                fill: parent
-                                margins: Kirigami.Units.smallSpacing
-                            }
-                            spacing: Kirigami.Units.smallSpacing
+                    ColumnLayout {
+                        width: parent.width
+                        spacing: Kirigami.Units.smallSpacing
 
-                            // No result / error notice
-                            PlasmaComponents3.Label {
-                                visible: dictionaryResult && (
-                                    dictionaryResult.error ||
-                                    dictionaryResult.exp.length === 0)
-                                text: dictionaryResult && dictionaryResult.error
-                                    ? dictionaryResult.error
-                                    : i18n("No dictionary results found.")
-                                color: dictionaryResult && dictionaryResult.error
-                                    ? Kirigami.Theme.negativeTextColor
-                                    : Kirigami.Theme.disabledTextColor
-                                font.italic: true
-                                wrapMode: Text.WordWrap
-                                Layout.fillWidth: true
-                            }
-
-                            // Phonetic text
-                            PlasmaComponents3.Label {
-                                visible: dictionaryResult && dictionaryResult.phonetic
-                                    && dictionaryResult.phonetic.length > 0
-                                text: dictionaryResult.phonetic
-                                font.bold: true
-                                color: Kirigami.Theme.neutralTextColor
-                                font.pixelSize: root.fontSizeLarge
-                                Layout.fillWidth: true
-                            }
-
-                            // Origin / etymology
-                            PlasmaComponents3.Label {
-                                visible: dictionaryResult && dictionaryResult.origin
-                                    && dictionaryResult.origin.length > 0
-                                text: i18n("Origin: %1", dictionaryResult.origin)
-                                font.italic: true
-                                color: Kirigami.Theme.disabledTextColor
-                                wrapMode: Text.WordWrap
-                                font.pixelSize: root.fontSizeSecondary
-                                Layout.fillWidth: true
-                            }
-
-                            // Audio bar
-                            Rectangle {
-                                visible: dictionaryResult && dictionaryResult.audio
-                                    && dictionaryResult.audio.length > 0
-                                Layout.fillWidth: true
-                                color: Kirigami.Theme.backgroundColor
-                                border.color: Kirigami.Theme.disabledTextColor
-                                border.width: 1
-                                radius: Kirigami.Units.smallSpacing
-                                implicitHeight: dictAudioRow.implicitHeight + Kirigami.Units.smallSpacing
-
-                                RowLayout {
-                                    id: dictAudioRow
-                                    anchors {
-                                        fill: parent
-                                        leftMargin: Kirigami.Units.smallSpacing
-                                        rightMargin: Kirigami.Units.smallSpacing
-                                    }
-                                    spacing: Kirigami.Units.smallSpacing
-
-                                    Repeater {
-                                        model: dictionaryResult ? dictionaryResult.audio : []
-
-                                        delegate: QQC2.Button {
-                                            id: dictAudioBtn
-                                            required property var modelData
-                                            text: modelData.text ? modelData.text : i18n("Play")
-                                            icon.name: "media-playback-start"
-                                            flat: true
-                                            Accessible.name: i18n("Play pronunciation")
-                                            Layout.fillWidth: true
-                                            onClicked: {
-                                                dictAudioPlayer.source = modelData.url
-                                                dictAudioPlayer.play()
-                                            }
-                                        }
-                                    }
-                                }
-
-                                MediaPlayer {
-                                    id: dictAudioPlayer
-                                    audioOutput: AudioOutput {}
-                                    onErrorOccurred: console.log("dictAudioPlayer error:", error, errorString)
-                                }
-                            }
-
-                            // Definitions (exp)
-                            Repeater {
-                                model: dictionaryResult ? dictionaryResult.exp : []
-
-                                delegate: ColumnLayout {
-                                    required property var modelData
-                                    Layout.fillWidth: true
-                                    spacing: Kirigami.Units.smallSpacing
-
-                                    // Part of speech label
-                                    PlasmaComponents3.Label {
-                                        visible: modelData.po.length > 0
-                                        text: modelData.po
-                                        font.bold: true
-                                        color: Kirigami.Theme.neutralTextColor
-                                        font.pixelSize: root.fontSizeBase
-                                    }
-
-
-                                    // Definitions
-                                    Repeater {
-                                        model: modelData.tr
-
-                                        delegate: Rectangle {
-                                            required property string modelData
-                                            Layout.fillWidth: true
-                                            Layout.leftMargin: Kirigami.Units.smallSpacing
-                                            color: Kirigami.Theme.backgroundColor
-                                            radius: Kirigami.Units.smallSpacing
-                                            implicitHeight: dictTrEdit.height + Kirigami.Units.smallSpacing
-
-                                            TextEdit {
-                                                id: dictTrEdit
-                                                anchors {
-                                                    left: parent.left
-                                                    right: parent.right
-                                                    margins: Kirigami.Units.smallSpacing
-                                                }
-                                                text: root.grayBrackets(modelData)
-                                                textFormat: TextEdit.RichText
-                                                wrapMode: TextEdit.WordWrap
-                                                font.pixelSize: root.fontSizeSecondary
-                                                font.family: root.fontFamily || undefined
-                                                color: Kirigami.Theme.textColor
-                                                readOnly: true
-                                                selectByMouse: true
-                                                height: contentHeight
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                        // Error
+                        PlasmaComponents3.Label {
+                            visible: root.errorMessage !== ""
+                            text: root.errorMessage
+                            color: Kirigami.Theme.negativeTextColor
+                            font.italic: true
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
                         }
-                    }
 
-                    // AI engine result (DeepSeek / SiliconFlow)
-                    Rectangle {
-                        visible: (root.currentMode === "deepseek" || root.currentMode === "siliconflow") && root.streamingInput !== ""
-                        Layout.fillWidth: true
-                        radius: Kirigami.Units.smallSpacing
-                        color: Kirigami.Theme.backgroundColor
-                        implicitHeight: resultCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+                        // Youdao result
+                        Rectangle {
+                            visible: youdaoResult !== null
+                            Layout.fillWidth: true
+                            radius: Kirigami.Units.smallSpacing
+                            color: Kirigami.Theme.backgroundColor
+                            implicitHeight: youdaoCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
-                        ColumnLayout {
-                            id: resultCol
-                            anchors {
-                                fill: parent
-                                margins: Kirigami.Units.smallSpacing
-                            }
-                            spacing: Kirigami.Units.smallSpacing
-
-                            // STREAMING MODE — raw text as it arrives
                             ColumnLayout {
-                                visible: root.translating
-                                spacing: Kirigami.Units.smallSpacing
-                                Layout.fillWidth: true
-
-                                // Waiting state (no content yet)
-                                RowLayout {
-                                    visible: root.streamingTranslation === ""
-                                    spacing: 4
-
-                                    PlasmaComponents3.Label {
-                                        text: i18n("Waiting for response")
-                                        font.pixelSize: root.fontSizeBase
-                                        font.family: root.fontFamily || undefined
-                                        color: Kirigami.Theme.textColor
-                                    }
-
-                                    Row {
-                                        spacing: 3
-                                        Repeater {
-                                            model: 3
-                                            delegate: Rectangle {
-                                                width: 5; height: 5
-                                                radius: 2.5
-                                                color: Kirigami.Theme.highlightColor
-                                                opacity: 0.3
-                                                SequentialAnimation on opacity {
-                                                    loops: Animation.Infinite
-                                                    running: root.translating
-                                                    PauseAnimation { duration: 200 * index }
-                                                    NumberAnimation {
-                                                        from: 0.3; to: 1.0; duration: 400; easing.type: Easing.InOutQuad
-                                                    }
-                                                    NumberAnimation {
-                                                        from: 1.0; to: 0.3; duration: 400; easing.type: Easing.InOutQuad
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                                id: youdaoCol
+                                anchors {
+                                    fill: parent
+                                    margins: Kirigami.Units.smallSpacing
                                 }
-
-                                // Streaming content
-                                TextEdit {
-                                    visible: root.streamingTranslation !== ""
-                                    text: root.streamingTranslation
-                                    textFormat: TextEdit.PlainText
-                                    font.pixelSize: root.fontSizeBase
-                                    font.family: root.fontFamily || undefined
-                                    color: Kirigami.Theme.textColor
-                                    wrapMode: TextEdit.WordWrap
-                                    Layout.fillWidth: true
-                                    readOnly: true
-                                    selectByMouse: true
-                                    height: contentHeight
-                                }
-                            }
-
-                            // STRUCTURED RESULT — parsed JSON display
-                            ColumnLayout {
-                                visible: !root.translating && root.aiResult !== null
-                                Layout.fillWidth: true
                                 spacing: Kirigami.Units.smallSpacing
 
-                                // Translation
+                                // No result notice
                                 PlasmaComponents3.Label {
-                                    text: i18n("Translation")
-                                    font.bold: true
-                                    font.pixelSize: root.fontSizeSmall
-                                    color: Kirigami.Theme.neutralTextColor
-                                    Layout.alignment: Qt.AlignHCenter
+                                    visible: youdaoResult && youdaoResult.exp.length === 0
+                                    text: i18n("No dictionary results found.")
+                                    color: Kirigami.Theme.disabledTextColor
+                                    font.italic: true
+                                    Layout.fillWidth: true
                                 }
 
-                                TextEdit {
-                                    text: root.grayBrackets(root.aiResult ? root.aiResult.translate || root.streamingTranslation : "")
-                                    textFormat: TextEdit.RichText
-                                    font.pixelSize: root.fontSizeLarge
-                                    font.family: root.fontFamily || undefined
-                                    color: Kirigami.Theme.textColor
-                                    wrapMode: TextEdit.WordWrap
+                                // Audio bar
+                                Rectangle {
+                                    visible: youdaoResult && youdaoResult.audio && youdaoResult.audio.length > 0
                                     Layout.fillWidth: true
-                                    readOnly: true
-                                    selectByMouse: true
-                                    height: contentHeight
-                                }
+                                    color: Kirigami.Theme.backgroundColor
+                                    border.color: Kirigami.Theme.disabledTextColor
+                                    border.width: 1
+                                    radius: Kirigami.Units.smallSpacing
+                                    implicitHeight: audioRow.implicitHeight + Kirigami.Units.smallSpacing
 
-                                // Words (词汇分析)
-                                ColumnLayout {
-                                    visible: root.aiResult && root.aiResult.words && root.aiResult.words.length > 0
-                                    Layout.fillWidth: true
-                                    spacing: 2
-
-                                    PlasmaComponents3.Label {
-                                        text: i18n("Word Analysis")
-                                        font.bold: true
-                                        font.pixelSize: root.fontSizeSmall
-                                        color: Kirigami.Theme.neutralTextColor
-                                        Layout.alignment: Qt.AlignHCenter
-                                        Layout.topMargin: Kirigami.Units.smallSpacing
-                                        Layout.bottomMargin: Kirigami.Units.smallSpacing
-                                    }
-
-                                    GridLayout {
-                                        columns: 3
-                                        columnSpacing: Kirigami.Units.largeSpacing
-                                        rowSpacing: Kirigami.Units.smallSpacing
-                                        Layout.fillWidth: true
-
-                                        // Headers
-                                        PlasmaComponents3.Label {
-                                            text: i18n("Word")
-                                            font.bold: true
-                                            font.pixelSize: root.fontSizeSmall
-                                            color: Kirigami.Theme.disabledTextColor
+                                    RowLayout {
+                                        id: audioRow
+                                        anchors {
+                                            fill: parent
+                                            leftMargin: Kirigami.Units.smallSpacing
+                                            rightMargin: Kirigami.Units.smallSpacing
                                         }
-                                        PlasmaComponents3.Label {
-                                            text: i18n("POS")
-                                            font.bold: true
-                                            font.pixelSize: root.fontSizeSmall
-                                            color: Kirigami.Theme.disabledTextColor
-                                        }
-                                        PlasmaComponents3.Label {
-                                            text: i18n("Meaning")
-                                            font.bold: true
-                                            font.pixelSize: root.fontSizeSmall
-                                            color: Kirigami.Theme.disabledTextColor
-                                        }
+                                        spacing: Kirigami.Units.smallSpacing
 
-                                        // Separator
-                                        Rectangle {
-                                            Layout.columnSpan: 3
-                                            Layout.fillWidth: true
-                                            height: 1
-                                            color: Kirigami.Theme.disabledTextColor
-                                            opacity: 0.2
-                                        }
-
-                                        // Data cells
                                         Repeater {
-                                            model: root._flatWordModel
+                                            model: youdaoResult ? youdaoResult.audio : []
 
-                                            delegate: Text {
+                                            delegate: QQC2.Button {
+                                                id: audioBtn
                                                 required property var modelData
                                                 text: modelData.text
-                                                font.bold: modelData.bold || false
-                                                font.pixelSize: root.fontSizeBase
-                                                font.family: root.fontFamily || undefined
-                                                color: modelData.color || Kirigami.Theme.textColor
-                                                textFormat: modelData.rich ? Text.StyledText : Text.PlainText
-                                                wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
-                                                Layout.fillWidth: modelData.fillWidth || false
-                                                Layout.alignment: Qt.AlignTop
+                                                icon.name: "media-playback-start"
+                                                flat: true
+                                                Accessible.name: i18n("Play pronunciation")
+                                                Layout.fillWidth: true
+                                                onClicked: {
+                                                    audioPlayer.source = modelData.url
+                                                    audioPlayer.play()
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    MediaPlayer {
+                                        id: audioPlayer
+                                        audioOutput: AudioOutput {}
+                                        onErrorOccurred: console.log("audioPlayer error:", error, errorString)
+                                        onPlaybackStateChanged: console.log("audioPlayer state:", playbackState)
+                                    }
+                                }
+
+                                // Exam type tags
+                                Flow {
+                                    visible: youdaoResult && youdaoResult.examType && youdaoResult.examType.length > 0
+                                    Layout.fillWidth: true
+                                    spacing: Kirigami.Units.smallSpacing
+
+                                    Repeater {
+                                        model: youdaoResult ? youdaoResult.examType : []
+
+                                        delegate: PlasmaComponents3.Label {
+                                            required property string modelData
+                                            text: modelData
+                                            color: Kirigami.Theme.linkColor
+                                            font.pixelSize: root.fontSizeSmall
+                                        }
+                                    }
+                                }
+
+                                // Forms
+                                Flow {
+                                    visible: youdaoResult && youdaoResult.form && youdaoResult.form.length > 0
+                                    Layout.fillWidth: true
+                                    spacing: Kirigami.Units.smallSpacing
+
+                                    Repeater {
+                                        model: youdaoResult ? youdaoResult.form : []
+
+                                        delegate: Rectangle {
+                                            required property var modelData
+                                            color: "transparent"
+                                            border.color: Kirigami.Theme.disabledTextColor
+                                            border.width: 1
+                                            radius: Kirigami.Units.smallSpacing
+                                            implicitHeight: formLabel.implicitHeight + Kirigami.Units.smallSpacing
+                                            implicitWidth: formLabel.implicitWidth + Kirigami.Units.smallSpacing + 10
+
+                                            PlasmaComponents3.Label {
+                                                id: formLabel
+                                                anchors.centerIn: parent
+                                                text: modelData.form + " " + modelData.type
+                                                font.pixelSize: root.fontSizeSmall
                                             }
                                         }
                                     }
                                 }
 
-                                // Frequently (常用搭配)
+                                // Definitions (exp)
                                 ColumnLayout {
-                                    visible: root.aiResult && root.aiResult.frequently && root.aiResult.frequently.length > 0
+                                    visible: youdaoResult && youdaoResult.exp && youdaoResult.exp.length > 0
                                     Layout.fillWidth: true
                                     spacing: 2
 
-                                    PlasmaComponents3.Label {
-                                        text: i18n("Collocations")
-                                        font.bold: true
-                                        font.pixelSize: root.fontSizeSmall
-                                        color: Kirigami.Theme.neutralTextColor
-                                        Layout.alignment: Qt.AlignHCenter
-                                        Layout.topMargin: Kirigami.Units.smallSpacing
-                                        Layout.bottomMargin: Kirigami.Units.smallSpacing
-                                    }
-
+                                    // With POS → 2-column grid
                                     GridLayout {
                                         columns: 2
                                         columnSpacing: Kirigami.Units.largeSpacing
                                         rowSpacing: Kirigami.Units.smallSpacing
                                         Layout.fillWidth: true
+                                        visible: root._youdaoHasPo
 
                                         // Headers
                                         PlasmaComponents3.Label {
-                                            text: i18n("Phrase")
+                                            text: i18n("词性")
                                             font.bold: true
                                             font.pixelSize: root.fontSizeSmall
                                             color: Kirigami.Theme.disabledTextColor
                                         }
                                         PlasmaComponents3.Label {
-                                            text: i18n("Translation")
+                                            text: i18n("释义")
                                             font.bold: true
                                             font.pixelSize: root.fontSizeSmall
                                             color: Kirigami.Theme.disabledTextColor
@@ -1435,19 +1120,52 @@ PlasmoidItem {
 
                                         // Data cells
                                         Repeater {
-                                            model: root._flatFreqModel
+                                            model: root._flatYoudaoDefModel
 
-                                            delegate: Text {
-                                                required property var modelData
-                                                text: modelData.text
-                                                font.bold: modelData.bold || false
-                                                font.pixelSize: root.fontSizeBase
+                                            delegate: PlasmaComponents3.Label {
+                                                text: modelData.role === "padding" ? "" : modelData.text
+                                                font.bold: modelData.role === "po"
+                                                font.pixelSize: modelData.role === "po" ? root.fontSizeSmall : root.fontSizeBase
                                                 font.family: root.fontFamily || undefined
-                                                color: modelData.color || Kirigami.Theme.textColor
-                                                textFormat: modelData.rich ? Text.StyledText : Text.PlainText
-                                                wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
-                                                Layout.fillWidth: modelData.fillWidth || false
-                                                Layout.alignment: Qt.AlignTop
+                                                color: modelData.role === "po" ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.textColor
+                                                textFormat: modelData.role === "tr" ? Text.StyledText : Text.PlainText
+                                                wrapMode: modelData.role === "tr" ? Text.WordWrap : Text.NoWrap
+                                                Layout.fillWidth: modelData.role === "tr"
+                                                Layout.alignment: modelData.role === "po" ? Qt.AlignTop : Qt.AlignVCenter
+                                            }
+                                        }
+                                    }
+
+                                    // No POS → simple list
+                                    ColumnLayout {
+                                        visible: !root._youdaoHasPo
+                                        Layout.fillWidth: true
+                                        spacing: Kirigami.Units.smallSpacing
+
+                                        Repeater {
+                                            model: root.youdaoResult ? root.youdaoResult.exp : []
+
+                                            delegate: ColumnLayout {
+                                                required property var modelData
+                                                Layout.fillWidth: true
+
+                                                Repeater {
+                                                    model: modelData.tr
+
+                                                    delegate: TextEdit {
+                                                        required property string modelData
+                                                        Layout.fillWidth: true
+                                                        text: root.grayBrackets(modelData)
+                                                        textFormat: TextEdit.RichText
+                                                        wrapMode: TextEdit.WordWrap
+                                                        font.pixelSize: root.fontSizeBase
+                                                        font.family: root.fontFamily || undefined
+                                                        color: Kirigami.Theme.textColor
+                                                        readOnly: true
+                                                        selectByMouse: true
+                                                        height: contentHeight
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -1455,52 +1173,449 @@ PlasmoidItem {
                             }
                         }
 
-                        // Floating cancel button (streaming)
-                        QQC2.Button {
-                            visible: root.translating
-                            anchors.top: parent.top
-                            anchors.right: parent.right
-                            anchors.topMargin: Kirigami.Units.smallSpacing
-                            anchors.rightMargin: Kirigami.Units.smallSpacing
-                            implicitWidth: Kirigami.Units.iconSizes.medium
-                            implicitHeight: Kirigami.Units.iconSizes.medium
-                            icon.name: "dialog-cancel"
-                            flat: true
-                            Accessible.name: i18n("Cancel translation")
-                            QQC2.ToolTip {
-                                text: i18n("Cancel")
-                                delay: Kirigami.Units.toolTipDelay
-                                visible: hovered
+                        // Free Dictionary API result
+                        Rectangle {
+                            visible: dictionaryResult !== null && root.currentMode === "dictionary"
+                            Layout.fillWidth: true
+                            radius: Kirigami.Units.smallSpacing
+                            color: Kirigami.Theme.backgroundColor
+                            implicitHeight: dictCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+
+                            ColumnLayout {
+                                id: dictCol
+                                anchors {
+                                    fill: parent
+                                    margins: Kirigami.Units.smallSpacing
+                                }
+                                spacing: Kirigami.Units.smallSpacing
+
+                                // No result / error notice
+                                PlasmaComponents3.Label {
+                                    visible: dictionaryResult && (
+                                        dictionaryResult.error ||
+                                        dictionaryResult.exp.length === 0)
+                                    text: dictionaryResult && dictionaryResult.error
+                                        ? dictionaryResult.error
+                                        : i18n("No dictionary results found.")
+                                    color: dictionaryResult && dictionaryResult.error
+                                        ? Kirigami.Theme.negativeTextColor
+                                        : Kirigami.Theme.disabledTextColor
+                                    font.italic: true
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                }
+
+                                // Phonetic text
+                                PlasmaComponents3.Label {
+                                    visible: dictionaryResult && dictionaryResult.phonetic
+                                        && dictionaryResult.phonetic.length > 0
+                                    text: dictionaryResult.phonetic
+                                    font.bold: true
+                                    color: Kirigami.Theme.neutralTextColor
+                                    font.pixelSize: root.fontSizeLarge
+                                    Layout.fillWidth: true
+                                }
+
+                                // Origin / etymology
+                                PlasmaComponents3.Label {
+                                    visible: dictionaryResult && dictionaryResult.origin
+                                        && dictionaryResult.origin.length > 0
+                                    text: i18n("Origin: %1", dictionaryResult.origin)
+                                    font.italic: true
+                                    color: Kirigami.Theme.disabledTextColor
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: root.fontSizeSecondary
+                                    Layout.fillWidth: true
+                                }
+
+                                // Audio bar
+                                Rectangle {
+                                    visible: dictionaryResult && dictionaryResult.audio
+                                        && dictionaryResult.audio.length > 0
+                                    Layout.fillWidth: true
+                                    color: Kirigami.Theme.backgroundColor
+                                    border.color: Kirigami.Theme.disabledTextColor
+                                    border.width: 1
+                                    radius: Kirigami.Units.smallSpacing
+                                    implicitHeight: dictAudioRow.implicitHeight + Kirigami.Units.smallSpacing
+
+                                    RowLayout {
+                                        id: dictAudioRow
+                                        anchors {
+                                            fill: parent
+                                            leftMargin: Kirigami.Units.smallSpacing
+                                            rightMargin: Kirigami.Units.smallSpacing
+                                        }
+                                        spacing: Kirigami.Units.smallSpacing
+
+                                        Repeater {
+                                            model: dictionaryResult ? dictionaryResult.audio : []
+
+                                            delegate: QQC2.Button {
+                                                id: dictAudioBtn
+                                                required property var modelData
+                                                text: modelData.text ? modelData.text : i18n("Play")
+                                                icon.name: "media-playback-start"
+                                                flat: true
+                                                Accessible.name: i18n("Play pronunciation")
+                                                Layout.fillWidth: true
+                                                onClicked: {
+                                                    dictAudioPlayer.source = modelData.url
+                                                    dictAudioPlayer.play()
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    MediaPlayer {
+                                        id: dictAudioPlayer
+                                        audioOutput: AudioOutput {}
+                                        onErrorOccurred: console.log("dictAudioPlayer error:", error, errorString)
+                                    }
+                                }
+
+                                // Definitions (exp)
+                                Repeater {
+                                    model: dictionaryResult ? dictionaryResult.exp : []
+
+                                    delegate: ColumnLayout {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        spacing: Kirigami.Units.smallSpacing
+
+                                        // Part of speech label
+                                        PlasmaComponents3.Label {
+                                            visible: modelData.po.length > 0
+                                            text: modelData.po
+                                            font.bold: true
+                                            color: Kirigami.Theme.neutralTextColor
+                                            font.pixelSize: root.fontSizeBase
+                                        }
+
+
+                                        // Definitions
+                                        Repeater {
+                                            model: modelData.tr
+
+                                            delegate: Rectangle {
+                                                required property string modelData
+                                                Layout.fillWidth: true
+                                                Layout.leftMargin: Kirigami.Units.smallSpacing
+                                                color: Kirigami.Theme.backgroundColor
+                                                radius: Kirigami.Units.smallSpacing
+                                                implicitHeight: dictTrEdit.height + Kirigami.Units.smallSpacing
+
+                                                TextEdit {
+                                                    id: dictTrEdit
+                                                    anchors {
+                                                        left: parent.left
+                                                        right: parent.right
+                                                        margins: Kirigami.Units.smallSpacing
+                                                    }
+                                                    text: root.grayBrackets(modelData)
+                                                    textFormat: TextEdit.RichText
+                                                    wrapMode: TextEdit.WordWrap
+                                                    font.pixelSize: root.fontSizeSecondary
+                                                    font.family: root.fontFamily || undefined
+                                                    color: Kirigami.Theme.textColor
+                                                    readOnly: true
+                                                    selectByMouse: true
+                                                    height: contentHeight
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                            onClicked: root.cancelTranslation()
                         }
 
-                        // Floating delete button
-                        QQC2.Button {
-                            visible: !root.translating && root.aiResult !== null
-                            anchors.top: parent.top
-                            anchors.right: parent.right
-                            anchors.topMargin: Kirigami.Units.smallSpacing
-                            anchors.rightMargin: Kirigami.Units.smallSpacing
-                            implicitWidth: Kirigami.Units.iconSizes.medium
-                            implicitHeight: Kirigami.Units.iconSizes.medium
-                            icon.name: "edit-delete"
-                            flat: true
-                            Accessible.name: i18n("Delete this result")
-                            QQC2.ToolTip {
-                                text: i18n("Delete from history")
-                                delay: Kirigami.Units.toolTipDelay
-                                visible: hovered
+                        // AI engine result (DeepSeek / SiliconFlow)
+                        Rectangle {
+                            visible: (root.currentMode === "deepseek" || root.currentMode === "siliconflow") && root.streamingInput !== ""
+                            Layout.fillWidth: true
+                            radius: Kirigami.Units.smallSpacing
+                            color: Kirigami.Theme.backgroundColor
+                            implicitHeight: resultCol.implicitHeight + Kirigami.Units.smallSpacing * 2
+
+                            ColumnLayout {
+                                id: resultCol
+                                anchors {
+                                    fill: parent
+                                    margins: Kirigami.Units.smallSpacing
+                                }
+                                spacing: Kirigami.Units.smallSpacing
+
+                                // STREAMING MODE — raw text as it arrives
+                                ColumnLayout {
+                                    visible: root.translating
+                                    spacing: Kirigami.Units.smallSpacing
+                                    Layout.fillWidth: true
+
+                                    // Waiting state (no content yet)
+                                    RowLayout {
+                                        visible: root.streamingTranslation === ""
+                                        spacing: 4
+
+                                        PlasmaComponents3.Label {
+                                            text: i18n("Waiting for response")
+                                            font.pixelSize: root.fontSizeBase
+                                            font.family: root.fontFamily || undefined
+                                            color: Kirigami.Theme.textColor
+                                        }
+
+                                        Row {
+                                            spacing: 3
+                                            Repeater {
+                                                model: 3
+                                                delegate: Rectangle {
+                                                    width: 5; height: 5
+                                                    radius: 2.5
+                                                    color: Kirigami.Theme.highlightColor
+                                                    opacity: 0.3
+                                                    SequentialAnimation on opacity {
+                                                        loops: Animation.Infinite
+                                                        running: root.translating
+                                                        PauseAnimation { duration: 200 * index }
+                                                        NumberAnimation {
+                                                            from: 0.3; to: 1.0; duration: 400; easing.type: Easing.InOutQuad
+                                                        }
+                                                        NumberAnimation {
+                                                            from: 1.0; to: 0.3; duration: 400; easing.type: Easing.InOutQuad
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Streaming content
+                                    TextEdit {
+                                        visible: root.streamingTranslation !== ""
+                                        text: root.streamingTranslation
+                                        textFormat: TextEdit.PlainText
+                                        font.pixelSize: root.fontSizeBase
+                                        font.family: root.fontFamily || undefined
+                                        color: Kirigami.Theme.textColor
+                                        wrapMode: TextEdit.WordWrap
+                                        Layout.fillWidth: true
+                                        readOnly: true
+                                        selectByMouse: true
+                                        height: contentHeight
+                                    }
+                                }
+
+                                // STRUCTURED RESULT — parsed JSON display
+                                ColumnLayout {
+                                    visible: !root.translating && root.aiResult !== null
+                                    Layout.fillWidth: true
+                                    spacing: Kirigami.Units.smallSpacing
+
+                                    // Translation
+                                    PlasmaComponents3.Label {
+                                        text: i18n("Translation")
+                                        font.bold: true
+                                        font.pixelSize: root.fontSizeSmall
+                                        color: Kirigami.Theme.neutralTextColor
+                                        Layout.alignment: Qt.AlignHCenter
+                                    }
+
+                                    TextEdit {
+                                        text: root.grayBrackets(root.aiResult ? root.aiResult.translate || root.streamingTranslation : "")
+                                        textFormat: TextEdit.RichText
+                                        font.pixelSize: root.fontSizeLarge
+                                        font.family: root.fontFamily || undefined
+                                        color: Kirigami.Theme.textColor
+                                        wrapMode: TextEdit.WordWrap
+                                        Layout.fillWidth: true
+                                        readOnly: true
+                                        selectByMouse: true
+                                        height: contentHeight
+                                    }
+
+                                    // Words (词汇分析)
+                                    ColumnLayout {
+                                        visible: root.aiResult && root.aiResult.words && root.aiResult.words.length > 0
+                                        Layout.fillWidth: true
+                                        spacing: 2
+
+                                        PlasmaComponents3.Label {
+                                            text: i18n("Word Analysis")
+                                            font.bold: true
+                                            font.pixelSize: root.fontSizeSmall
+                                            color: Kirigami.Theme.neutralTextColor
+                                            Layout.alignment: Qt.AlignHCenter
+                                            Layout.topMargin: Kirigami.Units.smallSpacing
+                                            Layout.bottomMargin: Kirigami.Units.smallSpacing
+                                        }
+
+                                        GridLayout {
+                                            columns: 3
+                                            columnSpacing: Kirigami.Units.largeSpacing
+                                            rowSpacing: Kirigami.Units.smallSpacing
+                                            Layout.fillWidth: true
+
+                                            // Headers
+                                            PlasmaComponents3.Label {
+                                                text: i18n("Word")
+                                                font.bold: true
+                                                font.pixelSize: root.fontSizeSmall
+                                                color: Kirigami.Theme.disabledTextColor
+                                            }
+                                            PlasmaComponents3.Label {
+                                                text: i18n("POS")
+                                                font.bold: true
+                                                font.pixelSize: root.fontSizeSmall
+                                                color: Kirigami.Theme.disabledTextColor
+                                            }
+                                            PlasmaComponents3.Label {
+                                                text: i18n("Meaning")
+                                                font.bold: true
+                                                font.pixelSize: root.fontSizeSmall
+                                                color: Kirigami.Theme.disabledTextColor
+                                            }
+
+                                            // Separator
+                                            Rectangle {
+                                                Layout.columnSpan: 3
+                                                Layout.fillWidth: true
+                                                height: 1
+                                                color: Kirigami.Theme.disabledTextColor
+                                                opacity: 0.2
+                                            }
+
+                                            // Data cells
+                                            Repeater {
+                                                model: root._flatWordModel
+
+                                                delegate: Text {
+                                                    required property var modelData
+                                                    text: modelData.text
+                                                    font.bold: modelData.bold || false
+                                                    font.pixelSize: root.fontSizeBase
+                                                    font.family: root.fontFamily || undefined
+                                                    color: modelData.color || Kirigami.Theme.textColor
+                                                    textFormat: modelData.rich ? Text.StyledText : Text.PlainText
+                                                    wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
+                                                    Layout.fillWidth: modelData.fillWidth || false
+                                                    Layout.alignment: Qt.AlignTop
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Frequently (常用搭配)
+                                    ColumnLayout {
+                                        visible: root.aiResult && root.aiResult.frequently && root.aiResult.frequently.length > 0
+                                        Layout.fillWidth: true
+                                        spacing: 2
+
+                                        PlasmaComponents3.Label {
+                                            text: i18n("Collocations")
+                                            font.bold: true
+                                            font.pixelSize: root.fontSizeSmall
+                                            color: Kirigami.Theme.neutralTextColor
+                                            Layout.alignment: Qt.AlignHCenter
+                                            Layout.topMargin: Kirigami.Units.smallSpacing
+                                            Layout.bottomMargin: Kirigami.Units.smallSpacing
+                                        }
+
+                                        GridLayout {
+                                            columns: 2
+                                            columnSpacing: Kirigami.Units.largeSpacing
+                                            rowSpacing: Kirigami.Units.smallSpacing
+                                            Layout.fillWidth: true
+
+                                            // Headers
+                                            PlasmaComponents3.Label {
+                                                text: i18n("Phrase")
+                                                font.bold: true
+                                                font.pixelSize: root.fontSizeSmall
+                                                color: Kirigami.Theme.disabledTextColor
+                                            }
+                                            PlasmaComponents3.Label {
+                                                text: i18n("Translation")
+                                                font.bold: true
+                                                font.pixelSize: root.fontSizeSmall
+                                                color: Kirigami.Theme.disabledTextColor
+                                            }
+
+                                            // Separator
+                                            Rectangle {
+                                                Layout.columnSpan: 2
+                                                Layout.fillWidth: true
+                                                height: 1
+                                                color: Kirigami.Theme.disabledTextColor
+                                                opacity: 0.2
+                                            }
+
+                                            // Data cells
+                                            Repeater {
+                                                model: root._flatFreqModel
+
+                                                delegate: Text {
+                                                    required property var modelData
+                                                    text: modelData.text
+                                                    font.bold: modelData.bold || false
+                                                    font.pixelSize: root.fontSizeBase
+                                                    font.family: root.fontFamily || undefined
+                                                    color: modelData.color || Kirigami.Theme.textColor
+                                                    textFormat: modelData.rich ? Text.StyledText : Text.PlainText
+                                                    wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
+                                                    Layout.fillWidth: modelData.fillWidth || false
+                                                    Layout.alignment: Qt.AlignTop
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                            onClicked: root.deleteCurrentResult()
+
+                            // Floating cancel button (streaming)
+                            QQC2.Button {
+                                visible: root.translating
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                                anchors.topMargin: Kirigami.Units.smallSpacing
+                                anchors.rightMargin: Kirigami.Units.smallSpacing
+                                implicitWidth: Kirigami.Units.iconSizes.medium
+                                implicitHeight: Kirigami.Units.iconSizes.medium
+                                icon.name: "dialog-cancel"
+                                flat: true
+                                Accessible.name: i18n("Cancel translation")
+                                QQC2.ToolTip {
+                                    text: i18n("Cancel")
+                                    delay: Kirigami.Units.toolTipDelay
+                                    visible: hovered
+                                }
+                                onClicked: root.cancelTranslation()
+                            }
+
+                            // Floating delete button
+                            QQC2.Button {
+                                visible: !root.translating && root.aiResult !== null
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                                anchors.topMargin: Kirigami.Units.smallSpacing
+                                anchors.rightMargin: Kirigami.Units.smallSpacing
+                                implicitWidth: Kirigami.Units.iconSizes.medium
+                                implicitHeight: Kirigami.Units.iconSizes.medium
+                                icon.name: "edit-delete"
+                                flat: true
+                                Accessible.name: i18n("Delete this result")
+                                QQC2.ToolTip {
+                                    text: i18n("Delete from history")
+                                    delay: Kirigami.Units.toolTipDelay
+                                    visible: hovered
+                                }
+                                onClicked: root.deleteCurrentResult()
+                            }
                         }
+
+                        Item { Layout.fillHeight: true }
                     }
-
-                    Item { Layout.fillHeight: true }
                 }
             }
         }
-    }
 
     // Tooltip
     toolTipMainText: i18n("Lingua Spanner — Translate")

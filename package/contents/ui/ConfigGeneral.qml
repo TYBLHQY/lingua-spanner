@@ -39,6 +39,16 @@ KCMUtils.SimpleKCM {
     property string cfg_modeEnabled: '["youdao","deepseek","siliconflow","dictionary"]'
     property string cfg_modeEnabledDefault: '["youdao","deepseek","siliconflow","dictionary"]'
 
+    // TTS mode list config (JSON arrays)
+    property string cfg_ttsModeOrder: '["edge-tts"]'
+    property string cfg_ttsModeOrderDefault: '["edge-tts"]'
+    property string cfg_ttsModeEnabled: '["edge-tts"]'
+    property string cfg_ttsModeEnabledDefault: '["edge-tts"]'
+    property string cfg_ttsDefaultVoice: ""
+    property string cfg_ttsDefaultVoiceDefault: ""
+    property double cfg_ttsSpeed: 1.0
+    property double cfg_ttsSpeedDefault: 1.0
+
     property string cfg_shortcutOpen: "Meta+1"
     property string cfg_shortcutOpenDefault: "Meta+1"
     property string cfg_shortcutPick: "Meta+2"
@@ -69,6 +79,17 @@ KCMUtils.SimpleKCM {
         {id: "siliconflow", label: i18n("SiliconFlow")},
         {id: "dictionary",  label: i18n("Free Dictionary API")}
     ]
+
+    // TTS mode metadata
+    readonly property var _ttsModeMeta: [
+        {id: "edge-tts", label: i18n("Edge TTS")}
+    ]
+
+    property var _curTtsOrder: parseModelList(cfg_ttsModeOrder, ["edge-tts"])
+    property var _curTtsEnabled: parseModelList(cfg_ttsModeEnabled, ["edge-tts"])
+
+    onCfg_ttsModeOrderChanged: _curTtsOrder = parseModelList(cfg_ttsModeOrder, ["edge-tts"])
+    onCfg_ttsModeEnabledChanged: _curTtsEnabled = parseModelList(cfg_ttsModeEnabled, ["edge-tts"])
 
     property var _curOrder: parseModelList(cfg_modeOrder, ["youdao","deepseek","siliconflow","dictionary"])
     property var _curEnabled: parseModelList(cfg_modeEnabled, ["youdao","deepseek","siliconflow","dictionary"])
@@ -104,6 +125,36 @@ KCMUtils.SimpleKCM {
         if (idx >= 0) { a.splice(idx, 1) } else { a.push(id) }
         page._curEnabled = a
         _saveEnabled()
+    }
+
+    // TTS mode management
+    function _ttsModeLabel(id) {
+        for (var i = 0; i < page._ttsModeMeta.length; i++)
+            if (page._ttsModeMeta[i].id === id) return page._ttsModeMeta[i].label
+        return id
+    }
+    function _saveTtsOrder() { cfg_ttsModeOrder = JSON.stringify(page._curTtsOrder) }
+    function _saveTtsEnabled() { cfg_ttsModeEnabled = JSON.stringify(page._curTtsEnabled) }
+    function _ttsMoveUp(idx) {
+        if (idx <= 0) return
+        var a = page._curTtsOrder.slice()
+        var tmp = a[idx]; a[idx] = a[idx-1]; a[idx-1] = tmp
+        page._curTtsOrder = a
+        _saveTtsOrder()
+    }
+    function _ttsMoveDown(idx) {
+        if (idx >= page._curTtsOrder.length - 1) return
+        var a = page._curTtsOrder.slice()
+        var tmp = a[idx]; a[idx] = a[idx+1]; a[idx+1] = tmp
+        page._curTtsOrder = a
+        _saveTtsOrder()
+    }
+    function _ttsToggleEnabled(id) {
+        var a = page._curTtsEnabled.slice()
+        var idx = a.indexOf(id)
+        if (idx >= 0) { a.splice(idx, 1) } else { a.push(id) }
+        page._curTtsEnabled = a
+        _saveTtsEnabled()
     }
 
     // UI
@@ -608,6 +659,131 @@ KCMUtils.SimpleKCM {
                         page.cfg_fontFamily = ""
                     }
                 }
+            }
+        }
+
+        // TTS mode list
+        Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
+
+        Kirigami.Heading {
+            level: 3
+            text: i18n("TTS Modes")
+            Layout.fillWidth: true
+            Layout.topMargin: Kirigami.Units.smallSpacing
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            radius: Kirigami.Units.smallSpacing
+            color: Kirigami.Theme.backgroundColor
+            border.color: Kirigami.Theme.disabledTextColor
+            border.width: 1
+            implicitHeight: ttsModeCol.implicitHeight + Kirigami.Units.smallSpacing
+
+            ColumnLayout {
+                id: ttsModeCol
+                anchors {
+                    fill: parent
+                    margins: Kirigami.Units.smallSpacing
+                }
+                spacing: Kirigami.Units.smallSpacing
+
+                Repeater {
+                    model: page._curTtsOrder
+
+                    delegate: RowLayout {
+                        required property int index
+                        required property string modelData
+                        spacing: Kirigami.Units.smallSpacing
+                        Layout.fillWidth: true
+
+                        QQC2.Switch {
+                            checked: page._curTtsEnabled.indexOf(modelData) >= 0
+                            onToggled: page._ttsToggleEnabled(modelData)
+                            Accessible.name: i18n("Enable %1", page._ttsModeLabel(modelData))
+                        }
+
+                        PlasmaComponents3.Label {
+                            text: page._ttsModeLabel(modelData)
+                            Layout.fillWidth: true
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        QQC2.Button {
+                            icon.name: "arrow-up"
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            enabled: index > 0
+                            flat: true
+                            onClicked: page._ttsMoveUp(index)
+                            Accessible.name: i18n("Move %1 up", page._ttsModeLabel(modelData))
+                        }
+
+                        QQC2.Button {
+                            icon.name: "arrow-down"
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            enabled: index < page._curTtsOrder.length - 1
+                            flat: true
+                            onClicked: page._ttsMoveDown(index)
+                            Accessible.name: i18n("Move %1 down", page._ttsModeLabel(modelData))
+                        }
+                    }
+                }
+            }
+        }
+
+        // TTS per-service settings
+        Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
+
+        Kirigami.Heading {
+            level: 3
+            text: i18n("TTS Settings")
+            Layout.fillWidth: true
+            Layout.topMargin: Kirigami.Units.smallSpacing
+        }
+
+        GridLayout {
+            columns: 2
+            Layout.fillWidth: true
+            rowSpacing: Kirigami.Units.smallSpacing
+            columnSpacing: Kirigami.Units.largeSpacing
+
+            PlasmaComponents3.Label {
+                text: i18n("Default Voice:")
+            }
+            QQC2.TextField {
+                Layout.fillWidth: true
+                placeholderText: i18n("e.g. zh-CN-XiaoxiaoNeural")
+                text: page.cfg_ttsDefaultVoice
+                onTextChanged: page.cfg_ttsDefaultVoice = text
+            }
+
+            PlasmaComponents3.Label {
+                text: i18n("Default Speech Speed:")
+            }
+            QQC2.SpinBox {
+                id: ttsSpeedSpin
+                from: 50
+                to: 200
+                stepSize: 10
+                editable: true
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+                // Scale: internal int 50-200 → display 0.50-2.00
+                readonly property int factor: 100
+                readonly property real realValue: value / factor
+
+                Component.onCompleted: value = Math.round(page.cfg_ttsSpeed * factor)
+
+                textFromValue: function(value, locale) {
+                    return Number(value / factor).toLocaleString(locale, 'f', 2)
+                }
+                valueFromText: function(text, locale) {
+                    return Math.round(Number.fromLocaleString(locale, text) * factor)
+                }
+
+                // Sync back to config on user interaction
+                onValueModified: page.cfg_ttsSpeed = realValue
             }
         }
 
