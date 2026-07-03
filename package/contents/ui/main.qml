@@ -18,7 +18,7 @@ PlasmoidItem {
     id: root
 
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
-    hideOnWindowDeactivate: true
+    hideOnWindowDeactivate: !root.pinned
 
     // Config shortcuts
     readonly property var _modeOrder: JSON.parse(Plasmoid.configuration.modeOrder || '["youdao","deepseek","siliconflow","dictionary"]')
@@ -41,6 +41,15 @@ PlasmoidItem {
 
     // Custom font family (empty = system default)
     readonly property string fontFamily: Plasmoid.configuration.fontFamily || ""
+
+    // Pin state — keep panel open on window focus loss
+    property bool pinned: false
+
+    // Toggle pin with Ctrl+P
+    Shortcut {
+        sequence: "Ctrl+P"
+        onActivated: root.pinned = !root.pinned
+    }
 
     // Language pair (AI modes only)
     property string sourceLang: "auto"
@@ -638,14 +647,15 @@ PlasmoidItem {
                     }
 
                     QQC2.Button {
-                        icon.name: "edit-find"
-                        enabled: !root._sameLangPair
+                        icon.name: root.pinned ? "window-pin" : "window-unpin"
                         implicitWidth: Kirigami.Units.iconSizes.medium
                         implicitHeight: Kirigami.Units.iconSizes.medium
-                        onClicked: root.translate(inputField.text)
-                        Accessible.name: i18n("Translate")
+                        onClicked: root.pinned = !root.pinned
+                        Accessible.name: root.pinned ? i18n("Unpin") : i18n("Pin")
                         QQC2.ToolTip {
-                            text: i18n("Translate")
+                            text: root.pinned
+                                ? i18n("Keep open when switching windows")
+                                : i18n("Pin panel open")
                             delay: Kirigami.Units.toolTipDelay
                             visible: hovered
                         }
