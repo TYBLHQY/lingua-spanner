@@ -300,7 +300,7 @@ PlasmoidItem {
     function translate(text) {
         if (!text || text.trim().length === 0) return
         var t = text.trim()
-        if (root.translating && root.inputText === t) return
+        if (root.translating) return
         inputText = t
         translating = true
         errorMessage = ""
