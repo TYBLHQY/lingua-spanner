@@ -110,10 +110,9 @@ PlasmoidItem {
     // History cache (DB-backed, used for duplicate detection)
     function _getCachedHistory(text, sourceLang, targetLang) {
         try {
-            var json = pasteSelectionHelper.proc.exec(
-                "SELECT id, result_json FROM translations WHERE (input_text=? OR cleaned_input=?) AND source_lang=? AND target_lang=? AND (engine='deepseek' OR engine='siliconflow') ORDER BY created_at DESC LIMIT 1",
-                JSON.stringify([text, text, sourceLang, targetLang])
-            )
+            var sql = "SELECT id, result_json FROM translations WHERE (LOWER(input_text)=? OR LOWER(cleaned_input)=?) AND LOWER(source_lang)=? AND LOWER(target_lang)=? AND (engine='deepseek' OR engine='siliconflow') ORDER BY created_at DESC LIMIT 1"
+            var params = JSON.stringify([text.toLowerCase(), text.toLowerCase(), sourceLang.toLowerCase(), targetLang.toLowerCase()])
+            var json = pasteSelectionHelper.proc.exec(sql, params)
             var rows = JSON.parse(json)
             if (rows.length > 0) {
                 var parsed = JSON.parse(rows[0].result_json || "{}")
@@ -188,8 +187,8 @@ PlasmoidItem {
             var engine = root.currentMode === "siliconflow" ? "siliconflow" : "deepseek"
             try {
                 var rows = JSON.parse(pasteSelectionHelper.proc.exec(
-                    "SELECT id FROM translations WHERE input_text=? AND engine=? AND source_lang=? AND target_lang=? ORDER BY created_at DESC LIMIT 1",
-                    JSON.stringify([root.inputText, engine, root.sourceLang, root.targetLang])
+                    "SELECT id FROM translations WHERE LOWER(input_text)=? AND engine=? AND LOWER(source_lang)=? AND LOWER(target_lang)=? ORDER BY created_at DESC LIMIT 1",
+                    JSON.stringify([root.inputText.toLowerCase(), engine, root.sourceLang.toLowerCase(), root.targetLang.toLowerCase()])
                 ))
                 idToDelete = rows.length > 0 ? rows[0].id : ""
             } catch (e) {
