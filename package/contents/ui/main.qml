@@ -421,10 +421,17 @@ PlasmoidItem {
 
     // Pick text from focused window when panel opens
     onExpandedChanged: {
-        console.log("onExpandedChanged: expanded=", root.expanded)
+        console.log("onExpandedChanged: expanded=", root.expanded, " pinned=", root.pinned)
         if (!root.expanded) {
-            // Reset click flag when panel closes, so next keyboard
-            // shortcut correctly triggers selection reading.
+            // Pin mode + shortcut-triggered close: instead of closing, keep open and re-query.
+            // Click-triggered close (root._openedByClick) always closes normally.
+            if (!root._openedByClick && root.pinned) {
+                console.log("pin active — reopening for re-query")
+                root._openedByClick = false  // preserve shortcut path for handlePanelOpened
+                root.expanded = true          // immediately revert; the true-branch below fires
+                return
+            }
+            // Normal close
             root._openedByClick = false
             return
         }
