@@ -508,11 +508,14 @@ PlasmoidItem {
         onFinished: function(result) {
             translating = false
             var wasRefresh = root._isRefresh
-            root._isRefresh = false
-            root._refreshUuid = ""
             if (result.translation) {
                 root.aiResult = result
+                // _insertTranslation handles clearing _isRefresh/_refreshUuid
+                // internally when it takes the UPDATE (refresh) branch.
                 root._insertTranslation("deepseek", result)
+            } else {
+                root._isRefresh = false
+                root._refreshUuid = ""
             }
             // After refresh completes — focus input and select all
             if (wasRefresh) {
@@ -570,11 +573,14 @@ PlasmoidItem {
         onFinished: function(result) {
             translating = false
             var wasRefresh = root._isRefresh
-            root._isRefresh = false
-            root._refreshUuid = ""
             if (result.translation) {
                 root.aiResult = result
+                // _insertTranslation handles clearing _isRefresh/_refreshUuid
+                // internally when it takes the UPDATE (refresh) branch.
                 root._insertTranslation("siliconflow", result)
+            } else {
+                root._isRefresh = false
+                root._refreshUuid = ""
             }
             // After refresh completes — focus input and select all
             if (wasRefresh) {
