@@ -395,7 +395,14 @@ Rectangle {
                 visible: hovered
             }
             onClicked: {
-                var json = JSON.stringify(pane.aiResult, null, 2)
+                // Strip the redundant 'translation' raw-text field before copying
+                var obj = {}
+                var keys = Object.keys(pane.aiResult)
+                for (var i = 0; i < keys.length; i++) {
+                    if (keys[i] !== "translation")
+                        obj[keys[i]] = pane.aiResult[keys[i]]
+                }
+                var json = JSON.stringify(obj, null, 2)
                 var te = Qt.createQmlObject('import QtQuick; TextEdit { visible: false }', pane)
                 te.text = json
                 te.selectAll()
