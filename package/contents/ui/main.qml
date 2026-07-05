@@ -120,6 +120,8 @@ PlasmoidItem {
 
     // TTS
     property bool ttsPlaying: false
+    property string _ttsPlayingText: ""
+    property bool _ttsRetrying: false
 
     // Flat grid models for column-aligned display
     // (moved to YoudaoResultPanel.qml, AiResultPanel.qml)
@@ -652,19 +654,58 @@ PlasmoidItem {
         pitch: root.ttsPitch
 
         onFinished: function(audioFilePath) {
-            root.ttsPlaying = false
+            root.ttsPlaying = true
             // Play back the generated audio via a system audio player
             ttsAudioPlayer.runCommand("paplay", [audioFilePath])
         }
         onError: function(msg) {
             root.errorMessage = msg
             root.ttsPlaying = false
+            root._ttsPlayingText = ""
+            root._ttsRetrying = false
         }
     }
 
-    // Background ProcessHelper for audio playback
+    // Background ProcessHelper for audio playback + playback error recovery
     ProcessHelper {
         id: ttsAudioPlayer
+        onCommandFinished: function(exitCode, stdOut, stdErr) {
+            if (exitCode === 0) {
+                // Playback succeeded
+                root.ttsPlaying = false
+                root._ttsPlayingText = ""
+                root._ttsRetrying = false
+                return
+            }
+
+            // paplay failed — likely a corrupt cached audio file
+            var text = root._ttsPlayingText
+            if (!text) {
+                root.ttsPlaying = false
+                return
+            }
+
+            // Delete the corrupt cached file and retry synthesis once
+            if (root._ttsRetrying) {
+                // Second failure — give up
+                root.errorMessage = i18n("TTS playback failed after retry")
+                root.ttsPlaying = false
+                root._ttsPlayingText = ""
+                root._ttsRetrying = false
+                return
+            }
+
+            root._ttsRetrying = true
+            // Re-synthesize (cache deleted inside EdgeTtsService on failure, but
+            // the corrupt file survived — delete it here to force re-generation)
+            var cacheDir = edgeTtsService._cacheDir
+            var cacheKey = edgeTtsService._cacheKey(text)
+            if (cacheDir && cacheKey) {
+                var badFile = cacheDir + "/" + cacheKey
+                pasteSelectionHelper.proc.removeFile(badFile)
+            }
+            edgeTtsService.synthesize(text)
+        }
     }
 
     compactRepresentation: Kirigami.Icon {
@@ -875,6 +916,8 @@ PlasmoidItem {
 
                                 root.errorMessage = ""
                                 root.ttsPlaying = true
+                                root._ttsPlayingText = text
+                                root._ttsRetrying = false
                                 edgeTtsService.synthesize(text)
                             }
                         }
