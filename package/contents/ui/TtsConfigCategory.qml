@@ -145,13 +145,6 @@ KCMUtils.SimpleKCM {
             Layout.fillWidth: true
         }
 
-        PlasmaComponents3.Label {
-            text: i18n("Lingua Spanner uses edge-tts, a Python CLI tool that leverages Microsoft's Edge online TTS service to generate natural-sounding speech.")
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
-            Layout.maximumWidth: Kirigami.Units.gridUnit * 30
-        }
-
         // Common settings
         Kirigami.Heading {
             level: 3
@@ -295,7 +288,7 @@ KCMUtils.SimpleKCM {
             columnSpacing: Kirigami.Units.largeSpacing
 
             // 简体中文
-            PlasmaComponents3.Label { text: page._langMeta[1].label }
+            PlasmaComponents3.Label { text: page._langMeta[0].label }
             QQC2.ComboBox {
                 id: zhVoiceCombo; editable: true; Layout.fillWidth: true
                 model: [page.cfg_edgeTtsVoiceZhDefault]
@@ -309,7 +302,7 @@ KCMUtils.SimpleKCM {
             }
 
             // English
-            PlasmaComponents3.Label { text: page._langMeta[2].label }
+            PlasmaComponents3.Label { text: page._langMeta[1].label }
             QQC2.ComboBox {
                 id: enVoiceCombo; editable: true; Layout.fillWidth: true
                 model: [page.cfg_edgeTtsVoiceEnDefault]
@@ -323,7 +316,7 @@ KCMUtils.SimpleKCM {
             }
 
             // Deutsch
-            PlasmaComponents3.Label { text: page._langMeta[3].label }
+            PlasmaComponents3.Label { text: page._langMeta[2].label }
             QQC2.ComboBox {
                 id: deVoiceCombo; editable: true; Layout.fillWidth: true
                 model: [page.cfg_edgeTtsVoiceDeDefault]
@@ -337,7 +330,7 @@ KCMUtils.SimpleKCM {
             }
 
             // 日本語
-            PlasmaComponents3.Label { text: page._langMeta[4].label }
+            PlasmaComponents3.Label { text: page._langMeta[3].label }
             QQC2.ComboBox {
                 id: jaVoiceCombo; editable: true; Layout.fillWidth: true
                 model: [page.cfg_edgeTtsVoiceJaDefault]
@@ -351,7 +344,7 @@ KCMUtils.SimpleKCM {
             }
 
             // Français
-            PlasmaComponents3.Label { text: page._langMeta[5].label }
+            PlasmaComponents3.Label { text: page._langMeta[4].label }
             QQC2.ComboBox {
                 id: frVoiceCombo; editable: true; Layout.fillWidth: true
                 model: [page.cfg_edgeTtsVoiceFrDefault]
@@ -365,7 +358,7 @@ KCMUtils.SimpleKCM {
             }
 
             // Español
-            PlasmaComponents3.Label { text: page._langMeta[6].label }
+            PlasmaComponents3.Label { text: page._langMeta[5].label }
             QQC2.ComboBox {
                 id: esVoiceCombo; editable: true; Layout.fillWidth: true
                 model: [page.cfg_edgeTtsVoiceEsDefault]
@@ -398,14 +391,6 @@ KCMUtils.SimpleKCM {
                     page._fetchingVoices = true
                     _procHelper.runCommand("edge-tts", ["--list-voices"])
                 }
-            }
-
-            PlasmaComponents3.Label {
-                text: i18n("Auto-fetches on first load; click to refresh")
-                color: Kirigami.Theme.disabledTextColor
-                font.pixelSize: 12
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
             }
         }
 

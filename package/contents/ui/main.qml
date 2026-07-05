@@ -873,9 +873,11 @@ PlasmoidItem {
                             id: ttsPlayBtn
                             implicitWidth: Kirigami.Units.iconSizes.medium
                             implicitHeight: Kirigami.Units.iconSizes.medium
-                            enabled: root._ttsTargetText() !== "" || root.ttsPlaying
+                            enabled: (root._ttsTargetText() !== "" || root.ttsPlaying) && !root.translating
 
                             icon.name: root.ttsPlaying ? "media-playback-stop" : "media-playback-start"
+
+                            focusPolicy: Qt.NoFocus
 
                             Accessible.name: root.ttsPlaying
                                 ? i18n("Stop TTS playback")
