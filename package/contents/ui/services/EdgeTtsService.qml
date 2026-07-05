@@ -35,6 +35,13 @@ QtObject {
     property string _text: ""
     property bool _connected: false
 
+    // --- timeout ---
+
+    property Timer _timeoutTimer: Timer {
+        interval: 40000
+        onTriggered: root._onTimeout()
+    }
+
     // --- public methods ---
 
     /// Synthesize text into an audio file and signal completion.
@@ -51,6 +58,7 @@ QtObject {
 
         root._text = text.trim()
         root._tempFilePath = root.proc.cacheFilePath("tts", ".mp3")
+        root._timeoutTimer.start()
         root.proc.runCommand("edge-tts", [
             "--text", root._text,
             "--voice", root.voice,
@@ -63,6 +71,7 @@ QtObject {
 
     /// Cancel the current TTS command.
     function cancel() {
+        root._timeoutTimer.stop()
         root.proc.cancelCommand()
     }
 
@@ -76,6 +85,7 @@ QtObject {
     }
 
     function _onFinished(exitCode, stdOut, stdErr) {
+        root._timeoutTimer.stop()
         if (exitCode === 0) {
             root.finished(root._tempFilePath)
         } else {
@@ -92,7 +102,13 @@ QtObject {
     }
 
     function _onError(errorMessage) {
+        root._timeoutTimer.stop()
         // From ProcessHelper: FailedToStart, timed out, or "already running"
         root.error(errorMessage)
+    }
+
+    function _onTimeout() {
+        root.proc.cancelCommand()
+        root.error(qsTr("Edge-TTS timed out (40s)"))
     }
 }
