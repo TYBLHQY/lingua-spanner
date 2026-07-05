@@ -23,6 +23,10 @@ KCMUtils.SimpleKCM {
     property string cfg_shortcutPick: "Meta+2"
     property string cfg_shortcutPickDefault: "Meta+2"
 
+    // KConfig XT binding — auto translate on selection
+    property alias cfg_autoTranslateOnSelection: autoTranslateSwitch.checked
+    property bool cfg_autoTranslateOnSelectionDefault: true
+
     // KConfig XT bindings — display
     property alias cfg_fontSizeBase: fontSizeSpin.value
     property int cfg_fontSizeBaseDefault: 14
@@ -310,6 +314,30 @@ KCMUtils.SimpleKCM {
                     Accessible.name: i18n("Reset to default font")
                     onClicked: fontFamilyCombo.editText = ""
                 }
+            }
+        }
+
+        Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
+
+        Kirigami.Heading {
+            level: 3
+            text: i18n("Behavior")
+            Layout.fillWidth: true
+            Layout.topMargin: Kirigami.Units.smallSpacing
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Kirigami.Units.smallSpacing
+
+            QQC2.Switch {
+                id: autoTranslateSwitch
+                Accessible.name: i18n("Auto translate on selection")
+            }
+            PlasmaComponents3.Label {
+                text: i18n("Auto translate text selection when panel opens via shortcut")
+                Layout.fillWidth: true
+                verticalAlignment: Text.AlignVCenter
             }
         }
 

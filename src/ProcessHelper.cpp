@@ -252,6 +252,11 @@ bool ProcessHelper::fileExists(const QString &filePath) const
     return QFileInfo::exists(filePath);
 }
 
+bool ProcessHelper::removeFile(const QString &filePath)
+{
+    return QFile::remove(filePath);
+}
+
 void ProcessHelper::cleanTtsCache(const QString &cacheDir, int maxFiles)
 {
     QDir dir(cacheDir);

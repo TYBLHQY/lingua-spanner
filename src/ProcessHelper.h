@@ -56,6 +56,9 @@ public:
     /// Check if a file exists on disk.
     Q_INVOKABLE bool fileExists(const QString &filePath) const;
 
+    /// Remove a file from disk. Returns true if successful.
+    Q_INVOKABLE bool removeFile(const QString &filePath);
+
     /// Remove oldest files from a cache directory until at most maxFiles remain.
     Q_INVOKABLE void cleanTtsCache(const QString &cacheDir, int maxFiles);
 

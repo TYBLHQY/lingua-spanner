@@ -491,7 +491,7 @@ PlasmoidItem {
         // owner changed within the last 1 second. Older content is stale
         // (user selected text 20s ago but hasn't selected anything new).
         var elapsed = Date.now() - pasteSelectionHelper.proc.selectionTimestamp
-        var isFresh = elapsed <= 1000
+        var isFresh = elapsed <= 2000
 
         if (!text || text.trim().length === 0 || !isFresh) {
             console.log("selection ready, fresh=", isFresh, "elapsed=", elapsed, "ms — focusing input")
@@ -509,7 +509,9 @@ PlasmoidItem {
         text = text.replace(/\r\n/g, " ").replace(/\n/g, " ").replace(/\s+/g, " ")
         p_inputField.text = text.trim()
         p_inputField.selectAll()
-        root.translate(p_inputField.text)
+        if (Plasmoid.configuration.autoTranslateOnSelection !== false) {
+            root.translate(p_inputField.text)
+        }
     }
 
     // Translation services

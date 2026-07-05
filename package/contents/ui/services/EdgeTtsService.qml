@@ -61,6 +61,10 @@ QtObject {
         return "tts_" + root._hashString(raw) + ".mp3"
     }
 
+    function _cachePath(text) {
+        return root._cacheDir + "/" + root._cacheKey(text)
+    }
+
     // --- public methods ---
 
     /// Synthesize text into an audio file and signal completion.
@@ -72,7 +76,7 @@ QtObject {
         }
         root._ensureConnected()
 
-        var cachePath = root._cacheDir + "/" + root._cacheKey(text)
+        var cachePath = root._cachePath(text)
         if (root.proc.fileExists(cachePath)) {
             // Cache hit — emit immediately
             root.finished(cachePath)
@@ -111,8 +115,13 @@ QtObject {
         if (exitCode === 0) {
             // Trim cache on each new addition so we never exceed the limit.
             root.proc.cleanTtsCache(root._cacheDir, root._maxCacheFiles)
-            root.finished(root._cacheDir + "/" + root._cacheKey(root._text))
+            root.finished(root._cachePath(root._text))
         } else {
+            // Synthesis failed — remove the partial/corrupt cache file
+            var badPath = root._cachePath(root._text)
+            if (root.proc.fileExists(badPath))
+                root.proc.removeFile(badPath)
+
             var lowerErr = (stdErr + " " + stdOut).toLowerCase()
             if (lowerErr.indexOf("not found") >= 0
                 || lowerErr.indexOf("command not found") >= 0
@@ -131,6 +140,10 @@ QtObject {
 
     function _onTimeout() {
         root.proc.cancelCommand()
+        // Remove the partial cache file on timeout
+        var badPath = root._cachePath(root._text)
+        if (root.proc.fileExists(badPath))
+            root.proc.removeFile(badPath)
         root.error(qsTr("Edge-TTS timed out (40s)"))
     }
 }
