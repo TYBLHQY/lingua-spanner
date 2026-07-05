@@ -48,6 +48,23 @@ Rectangle {
         return m
     }
 
+    readonly property var _flatExampleModel: {
+        if (!pane.aiResult || !pane.aiResult.examples) return []
+        var m = []
+        var examples = pane.aiResult.examples
+        for (var i = 0; i < examples.length; i++) {
+            var sentence = examples[i].sentence || ""
+            var trans = examples[i].translation || ""
+            m.push({
+                text: sentence + "<br>" + trans,
+                rich: true,
+                sentence: sentence,
+                translation: trans
+            })
+        }
+        return m
+    }
+
     // --- layout ---
     visible: pane.streamingInput !== ""
     Layout.fillWidth: true
@@ -281,6 +298,54 @@ Rectangle {
                             wrapMode: modelData.fillWidth ? Text.WordWrap : Text.NoWrap
                             Layout.fillWidth: modelData.fillWidth || false
                             Layout.alignment: Qt.AlignTop
+                        }
+                    }
+                }
+            }
+
+            // Examples (例句)
+            ColumnLayout {
+                visible: pane.aiResult && pane.aiResult.examples && pane.aiResult.examples.length > 0
+                Layout.fillWidth: true
+                spacing: 2
+
+                PlasmaComponents3.Label {
+                    text: i18n("Examples")
+                    font.bold: true
+                    font.pixelSize: fs.small
+                    color: Kirigami.Theme.neutralTextColor
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                    Layout.bottomMargin: Kirigami.Units.smallSpacing
+                }
+
+                Repeater {
+                    model: pane._flatExampleModel
+
+                    delegate: ColumnLayout {
+                        spacing: 0
+                        Layout.fillWidth: true
+
+                        Text {
+                            text: modelData.sentence
+                            font.italic: true
+                            font.pixelSize: fs.base
+                            font.family: fs.family || undefined
+                            color: Kirigami.Theme.textColor
+                            textFormat: Text.PlainText
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                        }
+
+                        Text {
+                            text: modelData.translation
+                            font.pixelSize: fs.base
+                            font.family: fs.family || undefined
+                            color: Kirigami.Theme.disabledTextColor
+                            textFormat: Text.PlainText
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
+                            Layout.bottomMargin: Kirigami.Units.smallSpacing
                         }
                     }
                 }
