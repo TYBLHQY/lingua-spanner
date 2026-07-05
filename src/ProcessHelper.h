@@ -53,6 +53,15 @@ public:
     /// Generate a temporary file path in the cache directory.
     Q_INVOKABLE QString cacheFilePath(const QString &prefix, const QString &suffix) const;
 
+    /// Check if a file exists on disk.
+    Q_INVOKABLE bool fileExists(const QString &filePath) const;
+
+    /// Remove oldest files from a cache directory until at most maxFiles remain.
+    Q_INVOKABLE void cleanTtsCache(const QString &cacheDir, int maxFiles);
+
+    /// Ensure a cache sub-directory exists and return its absolute path.
+    Q_INVOKABLE QString cacheDir(const QString &subdir) const;
+
     // Config persistence (JSON to ~/.config/linguaspanner/linguaspanner.json)
     /// Write entire config JSON object string to file. Empty string deletes the file.
     Q_INVOKABLE void saveConfig(const QString &json);

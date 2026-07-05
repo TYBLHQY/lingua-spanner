@@ -15,6 +15,7 @@
 #include <QSqlQuery>
 #include <QSqlRecord>
 #include <QStandardPaths>
+#include <QFileInfo>
 
 ProcessHelper::ProcessHelper(QObject *parent)
     : QObject(parent)
@@ -244,6 +245,31 @@ void ProcessHelper::cancelCommand()
         m_process->kill();
         m_process->waitForFinished(3000);
     }
+}
+
+bool ProcessHelper::fileExists(const QString &filePath) const
+{
+    return QFileInfo::exists(filePath);
+}
+
+void ProcessHelper::cleanTtsCache(const QString &cacheDir, int maxFiles)
+{
+    QDir dir(cacheDir);
+    if (!dir.exists()) return;
+
+    auto files = dir.entryInfoList(QDir::Files, QDir::Time | QDir::Reversed);
+    if (files.size() <= maxFiles) return;
+
+    for (int i = 0; i < files.size() - maxFiles; ++i)
+        QFile::remove(files.at(i).absoluteFilePath());
+}
+
+QString ProcessHelper::cacheDir(const QString &subdir) const
+{
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation);
+    QString fullDir = dir + QStringLiteral("/linguaspanner/") + subdir;
+    QDir().mkpath(fullDir);
+    return fullDir;
 }
 
 QString ProcessHelper::exec(const QString &sql, const QString &jsonParams)

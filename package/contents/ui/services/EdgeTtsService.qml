@@ -1,5 +1,6 @@
 // Edge-TTS Text-to-Speech Service
 // Calls the edge-tts CLI via ProcessHelper for async command execution.
+// Caches generated audio by text+voice hash to avoid repeated synthesis.
 // Requires: pip install edge-tts
 // GitHub: https://github.com/rany2/edge-tts
 
@@ -31,33 +32,54 @@ QtObject {
 
     // --- internal state ---
 
-    property string _tempFilePath: ""
     property string _text: ""
     property bool _connected: false
 
-    // --- timeout ---
+    // --- cache ---
+
+    /// Shared TTS cache directory.
+    readonly property string _cacheDir: root.proc.cacheDir("ttscache")
+
+    /// Maximum cached audio files.
+    readonly property int _maxCacheFiles: 100
 
     property Timer _timeoutTimer: Timer {
         interval: 40000
         onTriggered: root._onTimeout()
     }
 
+    /// DJB2 hash of the TTS arguments for cache key.
+    function _hashString(str) {
+        var hash = 5381
+        for (var i = 0; i < str.length; i++)
+            hash = ((hash << 5) + hash) + str.charCodeAt(i)
+        return (hash >>> 0).toString(16)
+    }
+
+    function _cacheKey(text) {
+        var raw = text.trim() + "|" + root.voice + "|" + root.rate + "|" + root.volume + "|" + root.pitch
+        return "tts_" + root._hashString(raw) + ".mp3"
+    }
+
     // --- public methods ---
 
     /// Synthesize text into an audio file and signal completion.
+    /// Returns cached audio immediately if available.
     function synthesize(text) {
         if (!text || text.trim().length === 0) {
             root.error(qsTr("No text to synthesize"))
             return
         }
-        if (root.proc.busy) {
-            root.error(qsTr("TTS is busy"))
-            return
-        }
         root._ensureConnected()
 
+        var cachePath = root._cacheDir + "/" + root._cacheKey(text)
+        if (root.proc.fileExists(cachePath)) {
+            // Cache hit — emit immediately
+            root.finished(cachePath)
+            return
+        }
+
         root._text = text.trim()
-        root._tempFilePath = root.proc.cacheFilePath("tts", ".mp3")
         root._timeoutTimer.start()
         root.proc.runCommand("edge-tts", [
             "--text", root._text,
@@ -65,7 +87,7 @@ QtObject {
             "--rate", root.rate,
             "--volume", root.volume,
             "--pitch", root.pitch,
-            "--write-media", root._tempFilePath
+            "--write-media", cachePath
         ])
     }
 
@@ -87,9 +109,10 @@ QtObject {
     function _onFinished(exitCode, stdOut, stdErr) {
         root._timeoutTimer.stop()
         if (exitCode === 0) {
-            root.finished(root._tempFilePath)
+            // Trim cache on each new addition so we never exceed the limit.
+            root.proc.cleanTtsCache(root._cacheDir, root._maxCacheFiles)
+            root.finished(root._cacheDir + "/" + root._cacheKey(root._text))
         } else {
-            // Distinguish "command not found" from other errors
             var lowerErr = (stdErr + " " + stdOut).toLowerCase()
             if (lowerErr.indexOf("not found") >= 0
                 || lowerErr.indexOf("command not found") >= 0
@@ -103,7 +126,6 @@ QtObject {
 
     function _onError(errorMessage) {
         root._timeoutTimer.stop()
-        // From ProcessHelper: FailedToStart, timed out, or "already running"
         root.error(errorMessage)
     }
 
