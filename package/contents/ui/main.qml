@@ -441,12 +441,12 @@ PlasmoidItem {
     onExpandedChanged: {
         console.log("onExpandedChanged: expanded=", root.expanded, " pinned=", root.pinned)
         if (!root.expanded) {
-            // Pin mode + shortcut-triggered close: instead of closing, keep open and re-query.
-            // Click-triggered close (root._openedByClick) always closes normally.
-            if (!root._openedByClick && root.pinned) {
-                console.log("pin active — reopening for re-query")
-                root._openedByClick = false  // preserve shortcut path for handlePanelOpened
-                root.expanded = true          // immediately revert; the true-branch below fires
+            // Shortcut-triggered close while panel has no focus: refocus instead of close.
+            // This lets the user bring the panel to front via shortcut without closing it.
+            if (!root._openedByClick && p_inputField && !p_inputField.activeFocus) {
+                console.log("shortcut close while unfocused — refocusing")
+                root._openedByClick = true  // forces click path in handlePanelOpened (just focus)
+                root.expanded = true
                 return
             }
             // Normal close
