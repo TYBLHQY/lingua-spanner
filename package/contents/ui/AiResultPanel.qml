@@ -23,6 +23,7 @@ Rectangle {
     // --- signals ---
     signal cancelRequested()
     signal deleteRequested()
+    signal refreshRequested()
 
     // --- computed flat models (mirror main.qml) ---
     readonly property var _flatWordModel: {
@@ -373,24 +374,42 @@ Rectangle {
         onClicked: pane.cancelRequested()
     }
 
-    // Floating delete button
-    QQC2.Button {
+    // Floating action buttons (refresh + delete)
+    Row {
         visible: !pane.translating && pane.aiResult !== null
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.topMargin: Kirigami.Units.smallSpacing
         anchors.rightMargin: Kirigami.Units.smallSpacing
-        implicitWidth: Kirigami.Units.iconSizes.medium
-        implicitHeight: Kirigami.Units.iconSizes.medium
-        icon.name: "edit-delete"
-        flat: true
-        Accessible.name: i18n("Delete this result")
-        QQC2.ToolTip {
-            text: i18n("Delete from history")
-            delay: Kirigami.Units.toolTipDelay
-            visible: hovered
+        spacing: 0
+
+        QQC2.Button {
+            implicitWidth: Kirigami.Units.iconSizes.medium
+            implicitHeight: Kirigami.Units.iconSizes.medium
+            icon.name: "view-refresh"
+            flat: true
+            Accessible.name: i18n("Re-translate")
+            QQC2.ToolTip {
+                text: i18n("Re-translate")
+                delay: Kirigami.Units.toolTipDelay
+                visible: hovered
+            }
+            onClicked: pane.refreshRequested()
         }
-        onClicked: pane.deleteRequested()
+
+        QQC2.Button {
+            implicitWidth: Kirigami.Units.iconSizes.medium
+            implicitHeight: Kirigami.Units.iconSizes.medium
+            icon.name: "edit-delete"
+            flat: true
+            Accessible.name: i18n("Delete this result")
+            QQC2.ToolTip {
+                text: i18n("Delete from history")
+                delay: Kirigami.Units.toolTipDelay
+                visible: hovered
+            }
+            onClicked: pane.deleteRequested()
+        }
     }
 
     // Gray out bracketed parenthetical notes

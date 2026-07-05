@@ -104,6 +104,11 @@ PlasmoidItem {
     // Used by deleteCurrentResult() to remove from the cache DB.
     property string currentTranslationId: ""
 
+    // Refresh state: when true, _insertTranslation does an UPDATE
+    // instead of INSERT, preserving the existing cache record.
+    property bool _isRefresh: false
+    property string _refreshUuid: ""
+
     // Flat grid models for column-aligned display
     // (moved to YoudaoResultPanel.qml, AiResultPanel.qml)
 
@@ -159,14 +164,27 @@ PlasmoidItem {
         return uuid
     }
 
-    // DB insert helper
+    // DB insert helper (or UPDATE during refresh)
     function _insertTranslation(engine, result) {
         try {
-            var uuid = root._generateUuid()
             var srcLang = result.source_lang || root.sourceLang
             var tgtLang = result.target_lang || root.targetLang
             var cleaned = result.cleaned_input || root.inputText
             var jsonStr = JSON.stringify(result)
+
+            if (root._isRefresh && root._refreshUuid) {
+                // UPDATE existing record — preserve UUID
+                pasteSelectionHelper.proc.exec(
+                    "UPDATE translations SET input_text=?, cleaned_input=?, engine=?, source_lang=?, target_lang=?, result_json=?, created_at=strftime('%Y-%m-%dT%H:%M:%S','now') WHERE id=?",
+                    JSON.stringify([root.inputText, cleaned, engine, srcLang, tgtLang, jsonStr, root._refreshUuid])
+                )
+                root.currentTranslationId = root._refreshUuid
+                root._isRefresh = false
+                root._refreshUuid = ""
+                return
+            }
+
+            var uuid = root._generateUuid()
             pasteSelectionHelper.proc.exec(
                 "INSERT INTO translations(id,input_text,cleaned_input,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?,?,?)",
                 JSON.stringify([uuid, root.inputText, cleaned, engine, srcLang, tgtLang, jsonStr])
@@ -242,6 +260,54 @@ PlasmoidItem {
             if (root.p_inputField.text.trim().length > 0) {
                 root.p_inputField.selectAll()
             }
+        }
+    }
+
+    // Re-fetch the current translation (refresh / re-translate)
+    // Preserves the existing DB UUID so the cache record is updated in-place.
+    function refreshTranslation() {
+        if (root.translating) return
+        var text = root.inputText
+        if (!text || text.trim().length === 0) return
+
+        var mode = root.currentMode
+        if (mode !== "deepseek" && mode !== "siliconflow") return
+
+        // Same-language guard
+        if (root._sameLangPair) {
+            root.errorMessage = i18n("Source and target languages are the same")
+            return
+        }
+
+        // Save the current UUID for in-place UPDATE
+        if (root.currentTranslationId) {
+            root._refreshUuid = root.currentTranslationId
+            root._isRefresh = true
+        }
+
+        root.translating = true
+        root.errorMessage = ""
+        root.streamingTranslation = ""
+        root.streamingInput = text
+
+        if (mode === "deepseek") {
+            if (!deepseekApiKey) {
+                root.errorMessage = i18n("DeepSeek API key not configured")
+                root.translating = false
+                root._isRefresh = false
+                root._refreshUuid = ""
+                return
+            }
+            deepseekService.translate(text, deepseekApiKey, deepseekModel, deepseekStream, deepseekTemperature, deepseekMaxTokens, deepseekTopP, root.sourceLang, root.targetLang)
+        } else if (mode === "siliconflow") {
+            if (!siliconFlowApiKey) {
+                root.errorMessage = i18n("SiliconFlow API key not configured")
+                root.translating = false
+                root._isRefresh = false
+                root._refreshUuid = ""
+                return
+            }
+            siliconFlowService.translate(text, siliconFlowApiKey, siliconFlowModel, siliconFlowStream, null, 4096, null, root.sourceLang, root.targetLang)
         }
     }
 
@@ -441,16 +507,44 @@ PlasmoidItem {
         }
         onFinished: function(result) {
             translating = false
+            var wasRefresh = root._isRefresh
+            root._isRefresh = false
+            root._refreshUuid = ""
             if (result.translation) {
                 root.aiResult = result
                 root._insertTranslation("deepseek", result)
             }
+            // After refresh completes — focus input and select all
+            if (wasRefresh) {
+                Qt.callLater(function() {
+                    if (root.p_inputField) {
+                        root.p_inputField.forceActiveFocus()
+                        if (root.p_inputField.text.trim().length > 0)
+                            root.p_inputField.selectAll()
+                    }
+                })
+            }
         }
         onError: function(msg) {
             translating = false
-            streamingTranslation = ""
-            streamingInput = ""
+            var wasRefresh = root._isRefresh
+            if (!wasRefresh) {
+                streamingTranslation = ""
+                streamingInput = ""
+            }
+            root._isRefresh = false
+            root._refreshUuid = ""
             root.errorMessage = msg
+            // After refresh fails — focus input and select all for retry
+            if (wasRefresh) {
+                Qt.callLater(function() {
+                    if (root.p_inputField) {
+                        root.p_inputField.forceActiveFocus()
+                        if (root.p_inputField.text.trim().length > 0)
+                            root.p_inputField.selectAll()
+                    }
+                })
+            }
         }
     }
 
@@ -475,16 +569,44 @@ PlasmoidItem {
         }
         onFinished: function(result) {
             translating = false
+            var wasRefresh = root._isRefresh
+            root._isRefresh = false
+            root._refreshUuid = ""
             if (result.translation) {
                 root.aiResult = result
                 root._insertTranslation("siliconflow", result)
             }
+            // After refresh completes — focus input and select all
+            if (wasRefresh) {
+                Qt.callLater(function() {
+                    if (root.p_inputField) {
+                        root.p_inputField.forceActiveFocus()
+                        if (root.p_inputField.text.trim().length > 0)
+                            root.p_inputField.selectAll()
+                    }
+                })
+            }
         }
         onError: function(msg) {
             translating = false
-            streamingTranslation = ""
-            streamingInput = ""
+            var wasRefresh = root._isRefresh
+            if (!wasRefresh) {
+                streamingTranslation = ""
+                streamingInput = ""
+            }
+            root._isRefresh = false
+            root._refreshUuid = ""
             root.errorMessage = msg
+            // After refresh fails — focus input and select all for retry
+            if (wasRefresh) {
+                Qt.callLater(function() {
+                    if (root.p_inputField) {
+                        root.p_inputField.forceActiveFocus()
+                        if (root.p_inputField.text.trim().length > 0)
+                            root.p_inputField.selectAll()
+                    }
+                })
+            }
         }
     }
     compactRepresentation: Kirigami.Icon {
@@ -801,6 +923,7 @@ PlasmoidItem {
                             aiResult: root.aiResult
                             onCancelRequested: root.cancelTranslation()
                             onDeleteRequested: root.deleteCurrentResult()
+                            onRefreshRequested: root.refreshTranslation()
                         }
 
                         Item { Layout.fillHeight: true }
