@@ -898,7 +898,7 @@ PlasmoidItem {
                         // TTS mode selector
                         QQC2.ComboBox {
                             id: ttsModeCombo
-                            Layout.preferredWidth: Kirigami.Units.gridUnit * 10
+                            Layout.fillWidth: true
                             enabled: !root.translating && !root.ttsPlaying
                             model: [
                                 { text: i18n("Edge-TTS"), value: "edge-tts" }
