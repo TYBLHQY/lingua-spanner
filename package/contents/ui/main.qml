@@ -880,6 +880,21 @@ PlasmoidItem {
                             }
                         }
 
+                        // Translate button
+                        QQC2.Button {
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            icon.name: "translate"
+                            enabled: !root.translating && inputField.text.trim().length > 0
+                            Accessible.name: i18n("Translate")
+                            QQC2.ToolTip {
+                                text: i18n("Translate")
+                                delay: Kirigami.Units.toolTipDelay
+                                visible: hovered
+                            }
+                            onClicked: root.translate(inputField.text)
+                        }
+
                         // TTS mode selector
                         QQC2.ComboBox {
                             id: ttsModeCombo
