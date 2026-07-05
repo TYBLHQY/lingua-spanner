@@ -9,15 +9,11 @@
 - **四引擎翻译**: DeepSeek API + SiliconFlow API（AI 翻译）+ 有道词典（释义/例句/发音）+ Free Dictionary API（英语定义）
 - **流式输出**: DeepSeek / SiliconFlow 支持 SSE 流式逐字输出
 - **一键取词**: Plasma 全局快捷键 — 自动读取选中文本、粘贴并翻译
-- **智能选区新鲜度**: 通过 `QClipboard::selectionChanged()` 检测选区新鲜度，仅采纳 1 秒内的主动选中
-- **翻译历史缓存**: AI 翻译自动缓存历史记录（SQLite 持久化），下次相同文本+语言对直接命中
-- **重新获取**: 已有结果可一键刷新重新调 API，缓存记录原地更新（UUID 不变）
+- **翻译历史缓存**: AI 翻译自动缓存历史记录，相同文本+语言对直接命中
 - **例句展示**: AI 翻译结果包含词汇分析、常用搭配及双语例句
-- **配置灵活**: API Key、模型选择、Temperature/Top-P/MaxTokens、自定义字体大小、引擎排序/启用均可配置
-- **引擎排序**: 配置页支持启用/禁用和拖拽排序各翻译引擎
-- **分类配置页**: 常规设置和 AI 引擎参数分页管理
-- **语言对选择**: DeepSeek / SiliconFlow 模式支持手动指定源语言和目标语言，或自动检测
-- **操作安全**: 翻译进行中自动禁用模式切换，防止并发请求
+- **引擎排序**: 配置页支持启用/禁用和排序各翻译引擎
+- **语言对选择**: AI 模式支持手动指定源语言和目标语言，或自动检测
+- **文本朗读**: 内置 Edge-TTS 语音合成，按语言自动匹配音色
 
 ## 引擎
 
@@ -26,56 +22,20 @@
 | **DeepSeek** | AI 大模型 | 需要 | 上下文感知翻译，支持流式，模型可选 |
 | **SiliconFlow** | AI 大模型 | 需要 | OpenAI 兼容 API，支持流式，模型可选 |
 | **Youdao 词典** | 网页爬虫 | 无需 | 词典释义 + 音标 + 词形 + 发音 + 考试标签 |
-| **Free Dictionary API** | 免费 API | 无需 | 英语单词语义、音标、词源（学习友好） |
+| **Free Dictionary API** | 免费 API | 无需 | 英语单词语义、音标、词源 |
 
 ## 安装
 
 ```sh
-# 构建并安装
-make build        # 编译 C++ 模块并打包到 package
-kpackagetool6 -t Plasma/Applet -i package/
-
-# 或一键部署
-make install      # build + install + restart
+make install
 ```
 
-## 开发
-
-```sh
-# 便捷脚本
-./dev status          # 查看状态
-./dev build | full | qml | install | test | restart
-
-# 快速迭代（QML 改动）
-make qml          # kpackagetool6 -u + restart
-
-# C++ 改动
-make build        # cmake --build + stage .so 到 package
-
-# 完整部署
-make full         # build + install + restart
-
-# 测试预览（不重启面板）
-make test
-
-# 单元测试
-qml6 -I package/contents/lib tests/tst_ProcessHelper.qml
-
-# 调试日志
-journalctl -f -o cat | grep -E "ProcessHelper|qml:"
-```
+> 需要先安装依赖：Qt6 (Quick, Gui) + KF6 (Plasma, I18n, Config, KCM)
 
 ## 配置
 
 - 系统设置 → 桌面部件 → Lingua Spanner
 - 快捷键：系统设置 → 快捷键 → Lingua Spanner（默认 Meta+1 打开面板，Meta+2 取词翻译）
-
-## 依赖
-
-| 依赖 | 用途 |
-|------|------|
-| Qt6 (Quick, Gui) | QML 运行时 + QClipboard |
-| KF6 (Plasma, I18n, Config, KCM) | Plasma 部件框架 |
 
 ## 许可
 
