@@ -873,31 +873,21 @@ PlasmoidItem {
                             id: ttsPlayBtn
                             implicitWidth: Kirigami.Units.iconSizes.medium
                             implicitHeight: Kirigami.Units.iconSizes.medium
-                            enabled: (root._ttsTargetText() !== "" || root.ttsPlaying) && !root.translating
+                            enabled: root._ttsTargetText() !== "" && !root.translating && !root.ttsPlaying
 
-                            icon.name: root.ttsPlaying ? "media-playback-stop" : "media-playback-start"
+                            icon.name: "media-playback-start"
 
                             focusPolicy: Qt.NoFocus
 
-                            Accessible.name: root.ttsPlaying
-                                ? i18n("Stop TTS playback")
-                                : i18n("Read aloud")
+                            Accessible.name: i18n("Read aloud")
 
                             QQC2.ToolTip {
-                                text: root.ttsPlaying
-                                    ? i18n("Stop")
-                                    : i18n("Read aloud")
+                                text: i18n("Read aloud")
                                 delay: Kirigami.Units.toolTipDelay
                                 visible: hovered
                             }
 
                             onClicked: {
-                                if (root.ttsPlaying) {
-                                    // Cancel TTS (stop edge-tts synthesis)
-                                    edgeTtsService.cancel()
-                                    root.ttsPlaying = false
-                                    return
-                                }
                                 var text = root._ttsTargetText()
                                 if (!text || text.trim().length === 0) return
 
