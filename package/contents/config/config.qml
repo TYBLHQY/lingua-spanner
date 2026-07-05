@@ -12,4 +12,9 @@ ConfigModel {
         icon: "dialog-password"
         source: "AiConfigCategory.qml"
     }
+    ConfigCategory {
+        name: i18n("TTS Engine")
+        icon: "media-playback-start"
+        source: "TtsConfigCategory.qml"
+    }
 }

@@ -32,6 +32,21 @@ PlasmoidItem {
     readonly property string siliconFlowModel: Plasmoid.configuration.siliconFlowModel || "deepseek-ai/DeepSeek-V4-Flash"
     readonly property bool siliconFlowStream: Plasmoid.configuration.siliconFlowStream !== undefined ? Plasmoid.configuration.siliconFlowStream : true
 
+    // TTS config — voice auto-selected by source language
+    readonly property string ttsVoice: {
+        var lang = root.sourceLang
+        if (lang === "zh") return Plasmoid.configuration.edgeTtsVoiceZh || "zh-CN-XiaoxiaoNeural"
+        if (lang === "en") return Plasmoid.configuration.edgeTtsVoiceEn || "en-US-EmmaMultilingualNeural"
+        if (lang === "de") return Plasmoid.configuration.edgeTtsVoiceDe || "de-DE-KatjaNeural"
+        if (lang === "ja") return Plasmoid.configuration.edgeTtsVoiceJa || "ja-JP-NanamiNeural"
+        if (lang === "fr") return Plasmoid.configuration.edgeTtsVoiceFr || "fr-FR-DeniseNeural"
+        if (lang === "es") return Plasmoid.configuration.edgeTtsVoiceEs || "es-ES-ElviraNeural"
+        return "en-US-EmmaMultilingualNeural"
+    }
+    readonly property string ttsRate: Plasmoid.configuration.edgeTtsRate || "+0%"
+    readonly property string ttsVolume: Plasmoid.configuration.edgeTtsVolume || "+0%"
+    readonly property string ttsPitch: Plasmoid.configuration.edgeTtsPitch || "+0Hz"
+
     // Font sizes (from config)
     readonly property int fontSizeBase: Plasmoid.configuration.fontSizeBase || 14
     readonly property int fontSizeLarge: fontSizeBase + 1
@@ -108,6 +123,9 @@ PlasmoidItem {
     // instead of INSERT, preserving the existing cache record.
     property bool _isRefresh: false
     property string _refreshUuid: ""
+
+    // TTS
+    property bool ttsPlaying: false
 
     // Flat grid models for column-aligned display
     // (moved to YoudaoResultPanel.qml, AiResultPanel.qml)
@@ -311,6 +329,16 @@ PlasmoidItem {
         }
     }
 
+    // Get the text to speak via TTS based on current translation result
+    function _ttsTargetText() {
+        // AI modes: use cleaned_input from result if available
+        if ((root.currentMode === "deepseek" || root.currentMode === "siliconflow")
+            && root.aiResult && root.aiResult.cleaned_input)
+            return root.aiResult.cleaned_input
+        // Other modes / fallback: use input text
+        return root.inputText
+    }
+
     // Reference to inputField inside fullRepresentation
     property QtObject p_inputField: null
 
@@ -367,6 +395,11 @@ PlasmoidItem {
         if (!text || text.trim().length === 0) return
         var t = text.trim()
         if (root.translating) return
+        // Cancel any ongoing TTS when starting a new translation
+        if (root.ttsPlaying) {
+            edgeTtsService.cancel()
+            root.ttsPlaying = false
+        }
         inputText = t
         translating = true
         errorMessage = ""
@@ -489,6 +522,8 @@ PlasmoidItem {
         }
 
         console.log("selection ready, fresh, elapsed=", elapsed, "ms, text='", text, "'")
+        // Normalize: replace newlines with spaces, then trim
+        text = text.replace(/\r\n/g, " ").replace(/\n/g, " ").replace(/\s+/g, " ")
         p_inputField.text = text.trim()
         p_inputField.selectAll()
         root.translate(p_inputField.text)
@@ -622,6 +657,31 @@ PlasmoidItem {
             }
         }
     }
+
+    // TTS service
+    Services.EdgeTtsService {
+        id: edgeTtsService
+        voice: root.ttsVoice
+        rate: root.ttsRate
+        volume: root.ttsVolume
+        pitch: root.ttsPitch
+
+        onFinished: function(audioFilePath) {
+            root.ttsPlaying = false
+            // Play back the generated audio via a system audio player
+            ttsAudioPlayer.runCommand("paplay", [audioFilePath])
+        }
+        onError: function(msg) {
+            root.errorMessage = msg
+            root.ttsPlaying = false
+        }
+    }
+
+    // Background ProcessHelper for audio playback
+    ProcessHelper {
+        id: ttsAudioPlayer
+    }
+
     compactRepresentation: Kirigami.Icon {
         source: "translate"
         implicitWidth: Kirigami.Units.iconSizes.small
@@ -794,6 +854,56 @@ PlasmoidItem {
                             }
                         }
 
+                        // TTS mode selector
+                        QQC2.ComboBox {
+                            id: ttsModeCombo
+                            Layout.preferredWidth: Kirigami.Units.gridUnit * 10
+                            enabled: !root.translating && !root.ttsPlaying
+                            model: [
+                                { text: i18n("Edge-TTS"), value: "edge-tts" }
+                            ]
+                            textRole: "text"
+                            valueRole: "value"
+                            Accessible.name: i18n("TTS mode")
+                            // Future: dynamic model from ttsModeOrder + ttsModeEnabled
+                        }
+
+                        // TTS Play / Stop button
+                        QQC2.Button {
+                            id: ttsPlayBtn
+                            implicitWidth: Kirigami.Units.iconSizes.medium
+                            implicitHeight: Kirigami.Units.iconSizes.medium
+                            enabled: root._ttsTargetText() !== "" || root.ttsPlaying
+
+                            icon.name: root.ttsPlaying ? "media-playback-stop" : "media-playback-start"
+
+                            Accessible.name: root.ttsPlaying
+                                ? i18n("Stop TTS playback")
+                                : i18n("Read aloud")
+
+                            QQC2.ToolTip {
+                                text: root.ttsPlaying
+                                    ? i18n("Stop")
+                                    : i18n("Read aloud")
+                                delay: Kirigami.Units.toolTipDelay
+                                visible: hovered
+                            }
+
+                            onClicked: {
+                                if (root.ttsPlaying) {
+                                    // Cancel TTS (stop edge-tts synthesis)
+                                    edgeTtsService.cancel()
+                                    root.ttsPlaying = false
+                                    return
+                                }
+                                var text = root._ttsTargetText()
+                                if (!text || text.trim().length === 0) return
+
+                                root.errorMessage = ""
+                                root.ttsPlaying = true
+                                edgeTtsService.synthesize(text)
+                            }
+                        }
                     }
                 }
 

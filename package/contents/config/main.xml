@@ -56,5 +56,57 @@
     <entry name="fontFamily" type="String">
       <default></default>
     </entry>
+
+    <!-- TTS modes (JSON array string, same pattern as modeOrder/modeEnabled) -->
+    <entry name="ttsModeOrder" type="String">
+      <default>["edge-tts"]</default>
+      <label>TTS engine order</label>
+    </entry>
+    <entry name="ttsModeEnabled" type="String">
+      <default>["edge-tts"]</default>
+      <label>Enabled TTS engines</label>
+    </entry>
+
+    <!-- Edge-TTS settings -->
+    <entry name="edgeTtsVoiceEn" type="String">
+      <default>en-US-EmmaMultilingualNeural</default>
+      <label>English TTS voice</label>
+    </entry>
+    <entry name="edgeTtsVoiceZh" type="String">
+      <default>zh-CN-XiaoxiaoNeural</default>
+      <label>Chinese TTS voice</label>
+    </entry>
+    <entry name="edgeTtsVoiceDe" type="String">
+      <default>de-DE-KatjaNeural</default>
+      <label>German TTS voice</label>
+    </entry>
+    <entry name="edgeTtsVoiceJa" type="String">
+      <default>ja-JP-NanamiNeural</default>
+      <label>Japanese TTS voice</label>
+    </entry>
+    <entry name="edgeTtsVoiceFr" type="String">
+      <default>fr-FR-DeniseNeural</default>
+      <label>French TTS voice</label>
+    </entry>
+    <entry name="edgeTtsVoiceEs" type="String">
+      <default>es-ES-ElviraNeural</default>
+      <label>Spanish TTS voice</label>
+    </entry>
+    <entry name="edgeTtsVoiceLists" type="String">
+      <default>{}</default>
+      <label>Cached voice lists per language (JSON object)</label>
+    </entry>
+    <entry name="edgeTtsRate" type="String">
+      <default>+0%</default>
+      <label>TTS speaking rate</label>
+    </entry>
+    <entry name="edgeTtsVolume" type="String">
+      <default>+0%</default>
+      <label>TTS volume</label>
+    </entry>
+    <entry name="edgeTtsPitch" type="String">
+      <default>+0Hz</default>
+      <label>TTS pitch</label>
+    </entry>
   </group>
 </kcfg>

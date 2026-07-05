@@ -29,6 +29,12 @@ KCMUtils.SimpleKCM {
     property string cfg_fontFamily: ""
     property string cfg_fontFamilyDefault: ""
 
+    // KConfig XT bindings — TTS modes
+    property string cfg_ttsModeOrder: '["edge-tts"]'
+    property string cfg_ttsModeOrderDefault: '["edge-tts"]'
+    property string cfg_ttsModeEnabled: '["edge-tts"]'
+    property string cfg_ttsModeEnabledDefault: '["edge-tts"]'
+
     // Helper: persist/restore model lists as JSON strings
     function parseModelList(json, fallback) {
         if (!json) return fallback
@@ -60,6 +66,10 @@ KCMUtils.SimpleKCM {
             if (page._modeMeta[i].id === id) return page._modeMeta[i].label
         return id
     }
+    function _ttsLabel(id) {
+        if (id === "edge-tts") return i18n("Edge-TTS")
+        return id
+    }
     function _saveOrder() { cfg_modeOrder = JSON.stringify(page._curOrder) }
     function _saveEnabled() { cfg_modeEnabled = JSON.stringify(page._curEnabled) }
 
@@ -83,6 +93,24 @@ KCMUtils.SimpleKCM {
         if (idx >= 0) { a.splice(idx, 1) } else { a.push(id) }
         page._curEnabled = a
         _saveEnabled()
+    }
+
+    // TTS modes — reactive properties
+    property var _ttsOrder: parseModelList(cfg_ttsModeOrder, ["edge-tts"])
+    property var _ttsEnabled: parseModelList(cfg_ttsModeEnabled, ["edge-tts"])
+
+    onCfg_ttsModeOrderChanged: _ttsOrder = parseModelList(cfg_ttsModeOrder, ["edge-tts"])
+    onCfg_ttsModeEnabledChanged: _ttsEnabled = parseModelList(cfg_ttsModeEnabled, ["edge-tts"])
+
+    function _saveTtsOrder() { cfg_ttsModeOrder = JSON.stringify(page._ttsOrder) }
+    function _saveTtsEnabled() { cfg_ttsModeEnabled = JSON.stringify(page._ttsEnabled) }
+
+    function _toggleTtsEnabled(id) {
+        var a = page._ttsEnabled.slice()
+        var idx = a.indexOf(id)
+        if (idx >= 0) { a.splice(idx, 1) } else { a.push(id) }
+        page._ttsEnabled = a
+        _saveTtsEnabled()
     }
 
     // UI
@@ -151,6 +179,57 @@ KCMUtils.SimpleKCM {
                             flat: true
                             onClicked: page._moveDown(index)
                             Accessible.name: i18n("Move %1 down", page._modeLabel(modelData))
+                        }
+                    }
+                }
+            }
+        }
+
+        // TTS modes
+        Kirigami.Separator { Layout.fillWidth: true; Layout.topMargin: Kirigami.Units.smallSpacing }
+
+        Kirigami.Heading {
+            level: 3
+            text: i18n("TTS Modes")
+            Layout.fillWidth: true
+            Layout.topMargin: Kirigami.Units.smallSpacing
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            radius: Kirigami.Units.smallSpacing
+            color: Kirigami.Theme.backgroundColor
+            border.color: Kirigami.Theme.disabledTextColor
+            border.width: 1
+            implicitHeight: ttsModeCol.implicitHeight + Kirigami.Units.smallSpacing
+
+            ColumnLayout {
+                id: ttsModeCol
+                anchors {
+                    fill: parent
+                    margins: Kirigami.Units.smallSpacing
+                }
+                spacing: Kirigami.Units.smallSpacing
+
+                Repeater {
+                    model: page._ttsOrder
+
+                    delegate: RowLayout {
+                        required property int index
+                        required property string modelData
+                        spacing: Kirigami.Units.smallSpacing
+                        Layout.fillWidth: true
+
+                        QQC2.Switch {
+                            checked: page._ttsEnabled.indexOf(modelData) >= 0
+                            onToggled: page._toggleTtsEnabled(modelData)
+                            Accessible.name: i18n("Enable %1", page._ttsLabel(modelData))
+                        }
+
+                        PlasmaComponents3.Label {
+                            text: page._ttsLabel(modelData)
+                            Layout.fillWidth: true
+                            verticalAlignment: Text.AlignVCenter
                         }
                     }
                 }

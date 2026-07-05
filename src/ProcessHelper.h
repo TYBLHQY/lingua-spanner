@@ -11,6 +11,8 @@
 
 #include <QSqlDatabase>
 
+class QProcess;
+
 class ProcessHelper : public QObject
 {
     Q_OBJECT
@@ -40,6 +42,17 @@ public:
     /// Close the database connection.
     Q_INVOKABLE void closeDb();
 
+    // Process execution
+    /// Run a command asynchronously via QProcess.
+    /// Fires commandFinished or commandError signals.
+    Q_INVOKABLE void runCommand(const QString &command, const QStringList &args);
+
+    /// Cancel a currently running command.
+    Q_INVOKABLE void cancelCommand();
+
+    /// Generate a temporary file path in the cache directory.
+    Q_INVOKABLE QString cacheFilePath(const QString &prefix, const QString &suffix) const;
+
     // Config persistence (JSON to ~/.config/linguaspanner/linguaspanner.json)
     /// Write entire config JSON object string to file. Empty string deletes the file.
     Q_INVOKABLE void saveConfig(const QString &json);
@@ -51,11 +64,18 @@ signals:
     /// Emitted when PRIMARY selection owner changes.
     void selectionTimestampChanged();
 
+    /// Emitted after runCommand completes.
+    void commandFinished(int exitCode, QString stdOut, QString stdErr);
+
+    /// Emitted when QProcess fails or runCommand is rejected.
+    void commandError(QString errorMessage);
+
 private:
     QString dbFilePath() const;
     QString configFilePath() const;
     qint64 m_selectionTimestamp = 0;
     QSqlDatabase m_db;
+    QProcess *m_process = nullptr;
 };
 
 #endif // PROCESHELPER_H
