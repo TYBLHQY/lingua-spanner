@@ -151,6 +151,7 @@ KCMUtils.SimpleKCM {
 
                         QQC2.Switch {
                             checked: page._curEnabled.indexOf(modelData) >= 0
+                            enabled: page._curEnabled.length > 1 || !checked
                             onToggled: page._toggleEnabled(modelData)
                             Accessible.name: i18n("Enable %1", page._modeLabel(modelData))
                         }
@@ -222,6 +223,7 @@ KCMUtils.SimpleKCM {
 
                         QQC2.Switch {
                             checked: page._ttsEnabled.indexOf(modelData) >= 0
+                            enabled: page._ttsEnabled.length > 1 || !checked
                             onToggled: page._toggleTtsEnabled(modelData)
                             Accessible.name: i18n("Enable %1", page._ttsLabel(modelData))
                         }
