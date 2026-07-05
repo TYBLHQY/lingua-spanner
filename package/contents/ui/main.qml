@@ -443,7 +443,7 @@ PlasmoidItem {
         if (!root.expanded) {
             // Shortcut-triggered close while panel has no focus: refocus instead of close.
             // This lets the user bring the panel to front via shortcut without closing it.
-            if (!root._openedByClick && p_inputField && !p_inputField.activeFocus) {
+            if (!root._openedByClick && root.pinned && p_inputField && !p_inputField.activeFocus) {
                 console.log("shortcut close while unfocused — refocusing")
                 root._openedByClick = true  // forces click path in handlePanelOpened (just focus)
                 root.expanded = true
