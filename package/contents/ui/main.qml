@@ -101,12 +101,6 @@ PlasmoidItem {
     property bool translating: false
     property string errorMessage: ""
 
-    // 同语言翻译拦截
-    // AI 模式下 sourceLang 和 targetLang 显式相同时禁止翻译
-    readonly property bool _sameLangPair: (root.currentMode === "deepseek" || root.currentMode === "siliconflow")
-        && root.sourceLang !== "auto"
-        && root.targetLang !== "auto"
-        && root.sourceLang === root.targetLang
 
     // DeepSeek streaming display
     property string streamingTranslation: ""
@@ -291,11 +285,6 @@ PlasmoidItem {
         var mode = root.currentMode
         if (mode !== "deepseek" && mode !== "siliconflow") return
 
-        // Same-language guard
-        if (root._sameLangPair) {
-            root.errorMessage = i18n("Source and target languages are the same")
-            return
-        }
 
         // Save the current UUID for in-place UPDATE
         if (root.currentTranslationId) {
@@ -414,12 +403,6 @@ PlasmoidItem {
 
         var mode = root.currentMode
 
-        // AI 模式下源语言和目标语言相同时禁止翻译
-        if ((mode === "deepseek" || mode === "siliconflow") && root._sameLangPair) {
-            errorMessage = i18n("Source and target languages are the same")
-            translating = false
-            return
-        }
 
         if (mode === "youdao") {
             youdaoService.fetch(inputText)
@@ -876,9 +859,6 @@ PlasmoidItem {
                             enabled: root._ttsTargetText() !== "" && !root.translating && !root.ttsPlaying
 
                             icon.name: "media-playback-start"
-
-                            focusPolicy: Qt.NoFocus
-
                             Accessible.name: i18n("Read aloud")
 
                             QQC2.ToolTip {
