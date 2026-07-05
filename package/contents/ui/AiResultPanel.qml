@@ -374,7 +374,7 @@ Rectangle {
         onClicked: pane.cancelRequested()
     }
 
-    // Floating action buttons (refresh + delete)
+    // Floating action buttons (copy + refresh + delete)
     Row {
         visible: !pane.translating && pane.aiResult !== null
         anchors.top: parent.top
@@ -382,6 +382,27 @@ Rectangle {
         anchors.topMargin: Kirigami.Units.smallSpacing
         anchors.rightMargin: Kirigami.Units.smallSpacing
         spacing: 0
+
+        QQC2.Button {
+            implicitWidth: Kirigami.Units.iconSizes.medium
+            implicitHeight: Kirigami.Units.iconSizes.medium
+            icon.name: "edit-copy"
+            flat: true
+            Accessible.name: i18n("Copy result as JSON")
+            QQC2.ToolTip {
+                text: i18n("Copy JSON")
+                delay: Kirigami.Units.toolTipDelay
+                visible: hovered
+            }
+            onClicked: {
+                var json = JSON.stringify(pane.aiResult, null, 2)
+                var te = Qt.createQmlObject('import QtQuick; TextEdit { visible: false }', pane)
+                te.text = json
+                te.selectAll()
+                te.copy()
+                te.destroy()
+            }
+        }
 
         QQC2.Button {
             implicitWidth: Kirigami.Units.iconSizes.medium
