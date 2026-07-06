@@ -178,6 +178,74 @@ PlasmoidItem {
         return uuid
     }
 
+    // Validate AI result JSON against the expected schema, fixing
+    // missing/wrong fields in-place. Returns true if the result is
+    // minimally usable (i.e. it has a translation or any content).
+    function _validateAiResult(result) {
+        if (!result || typeof result !== "object") {
+            console.log("AI result validation: result is not an object")
+            return false
+        }
+
+        // Normalise field name: the prompt asks for "translate",
+        // but some models return "translation" instead.
+        if (result.translate === undefined && result.translation !== undefined) {
+            result.translate = result.translation
+        }
+        // Ensure translate is a string.
+        if (typeof result.translate !== "string")
+            result.translate = ""
+
+        // source_lang / target_lang
+        if (typeof result.source_lang !== "string") result.source_lang = ""
+        if (typeof result.target_lang !== "string") result.target_lang = ""
+
+        // cleaned_input
+        if (typeof result.cleaned_input !== "string") result.cleaned_input = ""
+
+        // words: [ { word, pos, meaning } ]
+        if (!Array.isArray(result.words))
+            result.words = []
+        else
+            result.words = result.words.filter(function(w) {
+                return w && typeof w === "object"
+            }).map(function(w) {
+                return {
+                    word:     typeof w.word     === "string" ? w.word     : "",
+                    pos:      typeof w.pos      === "string" ? w.pos      : "",
+                    meaning:  typeof w.meaning  === "string" ? w.meaning  : ""
+                }
+            })
+
+        // frequently: [ { phrase, translation } ]
+        if (!Array.isArray(result.frequently))
+            result.frequently = []
+        else
+            result.frequently = result.frequently.filter(function(f) {
+                return f && typeof f === "object"
+            }).map(function(f) {
+                return {
+                    phrase:      typeof f.phrase      === "string" ? f.phrase      : "",
+                    translation: typeof f.translation === "string" ? f.translation : ""
+                }
+            })
+
+        // examples: [ { sentence, translation } ]
+        if (!Array.isArray(result.examples))
+            result.examples = []
+        else
+            result.examples = result.examples.filter(function(e) {
+                return e && typeof e === "object"
+            }).map(function(e) {
+                return {
+                    sentence:    typeof e.sentence    === "string" ? e.sentence    : "",
+                    translation: typeof e.translation === "string" ? e.translation : ""
+                }
+            })
+
+        return true
+    }
+
     // DB insert helper (or UPDATE during refresh)
     function _insertTranslation(engine, result) {
         try {
@@ -548,6 +616,7 @@ PlasmoidItem {
             translating = false
             var wasRefresh = root._isRefresh
             if (result.translation) {
+                root._validateAiResult(result)
                 root.aiResult = result
                 // _insertTranslation handles clearing _isRefresh/_refreshUuid
                 // internally when it takes the UPDATE (refresh) branch.
@@ -613,6 +682,7 @@ PlasmoidItem {
             translating = false
             var wasRefresh = root._isRefresh
             if (result.translation) {
+                root._validateAiResult(result)
                 root.aiResult = result
                 // _insertTranslation handles clearing _isRefresh/_refreshUuid
                 // internally when it takes the UPDATE (refresh) branch.
