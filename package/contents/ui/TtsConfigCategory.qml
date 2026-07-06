@@ -25,17 +25,17 @@ KCMUtils.SimpleKCM {
     property string cfg_edgeTtsPitchDefault: "+0Hz"
 
     // KConfig XT bindings — per-language voice selection
-    property alias cfg_edgeTtsVoiceZh: zhVoiceCombo.editText
+    property string cfg_edgeTtsVoiceZh: "zh-CN-XiaoxiaoNeural"
     property string cfg_edgeTtsVoiceZhDefault: "zh-CN-XiaoxiaoNeural"
-    property alias cfg_edgeTtsVoiceEn: enVoiceCombo.editText
+    property string cfg_edgeTtsVoiceEn: "en-US-EmmaMultilingualNeural"
     property string cfg_edgeTtsVoiceEnDefault: "en-US-EmmaMultilingualNeural"
-    property alias cfg_edgeTtsVoiceDe: deVoiceCombo.editText
+    property string cfg_edgeTtsVoiceDe: "de-DE-KatjaNeural"
     property string cfg_edgeTtsVoiceDeDefault: "de-DE-KatjaNeural"
-    property alias cfg_edgeTtsVoiceJa: jaVoiceCombo.editText
+    property string cfg_edgeTtsVoiceJa: "ja-JP-NanamiNeural"
     property string cfg_edgeTtsVoiceJaDefault: "ja-JP-NanamiNeural"
-    property alias cfg_edgeTtsVoiceFr: frVoiceCombo.editText
+    property string cfg_edgeTtsVoiceFr: "fr-FR-DeniseNeural"
     property string cfg_edgeTtsVoiceFrDefault: "fr-FR-DeniseNeural"
-    property alias cfg_edgeTtsVoiceEs: esVoiceCombo.editText
+    property string cfg_edgeTtsVoiceEs: "es-ES-ElviraNeural"
     property string cfg_edgeTtsVoiceEsDefault: "es-ES-ElviraNeural"
 
     // KConfig XT bindings — cached voice lists (JSON object, keyed by language prefix)
@@ -74,11 +74,11 @@ KCMUtils.SimpleKCM {
         } catch(e) { return false }
     }
 
-    // Helper to set a combo's model by language id
+    // Helper to set a combo's model by language id, preserving the user's configured value
     function _setComboModel(langId, voices) {
         var combo = page._getCombo(langId)
         if (!combo) return
-        var saved = combo.editText
+        var saved = page._getConfigProp(langId)
         combo.model = voices
         var idx = combo.find(saved)
         if (idx >= 0) combo.currentIndex = idx
@@ -93,6 +93,16 @@ KCMUtils.SimpleKCM {
         if (langId === "fr") return frVoiceCombo
         if (langId === "es") return esVoiceCombo
         return null
+    }
+
+    function _getConfigProp(langId) {
+        if (langId === "zh") return page.cfg_edgeTtsVoiceZh
+        if (langId === "en") return page.cfg_edgeTtsVoiceEn
+        if (langId === "de") return page.cfg_edgeTtsVoiceDe
+        if (langId === "ja") return page.cfg_edgeTtsVoiceJa
+        if (langId === "fr") return page.cfg_edgeTtsVoiceFr
+        if (langId === "es") return page.cfg_edgeTtsVoiceEs
+        return ""
     }
 
     // Parse edge-tts --list-voices output, group by language, populate combos, cache result
