@@ -36,10 +36,6 @@ install(TARGETS lingua_spanner_helper
 )
 
 install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/LinguaSpannerHelper/qmldir"
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/qml/LinguaSpannerHelper
-)
-install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/LinguaSpannerHelper/plugins.qmltypes"
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/qml/LinguaSpannerHelper
     OPTIONAL
