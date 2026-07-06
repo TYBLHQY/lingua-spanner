@@ -24,6 +24,7 @@ Rectangle {
     signal cancelRequested()
     signal deleteRequested()
     signal refreshRequested()
+    signal focusInputRequested()
 
     // --- computed flat models (mirror main.qml) ---
     readonly property var _flatWordModel: {
@@ -408,6 +409,7 @@ Rectangle {
                 te.selectAll()
                 te.copy()
                 te.destroy()
+                pane.focusInputRequested()
             }
         }
 

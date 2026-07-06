@@ -318,6 +318,7 @@ PlasmoidItem {
             }
             siliconFlowService.translate(text, siliconFlowApiKey, siliconFlowModel, siliconFlowStream, null, 4096, null, root.sourceLang, root.targetLang)
         }
+        root._focusAndSelectInput()
     }
 
     // Get the text to speak via TTS based on current translation result
@@ -328,6 +329,15 @@ PlasmoidItem {
             return root.aiResult.cleaned_input
         // Other modes / fallback: use input text
         return root.inputText
+    }
+
+    // Focus the input field and select all text
+    function _focusAndSelectInput() {
+        if (root.p_inputField) {
+            root.p_inputField.forceActiveFocus()
+            if (root.p_inputField.text.trim().length > 0)
+                root.p_inputField.selectAll()
+        }
     }
 
     // Reference to inputField inside fullRepresentation
@@ -803,7 +813,7 @@ PlasmoidItem {
                             icon.name: root.pinned ? "window-pin" : "window-unpin"
                             implicitWidth: Kirigami.Units.iconSizes.medium
                             implicitHeight: Kirigami.Units.iconSizes.medium
-                            onClicked: root.pinned = !root.pinned
+                            onClicked: { root.pinned = !root.pinned; root._focusAndSelectInput() }
                             Accessible.name: root.pinned ? i18n("Unpin") : i18n("Pin")
                             QQC2.ToolTip {
                                 text: root.pinned
@@ -892,7 +902,7 @@ PlasmoidItem {
                                 delay: Kirigami.Units.toolTipDelay
                                 visible: hovered
                             }
-                            onClicked: root.translate(inputField.text)
+                            onClicked: { root.translate(inputField.text); root._focusAndSelectInput() }
                         }
 
                         // TTS mode selector
@@ -1009,6 +1019,7 @@ PlasmoidItem {
                                 for (var i = 0; i < targetLangCombo.model.length; i++)
                                     if (targetLangCombo.model[i].value === root.targetLang)
                                         { targetLangCombo.currentIndex = i; break }
+                                root._focusAndSelectInput()
                             }
                         }
 
@@ -1084,8 +1095,9 @@ PlasmoidItem {
                             streamingTranslation: root.streamingTranslation
                             aiResult: root.aiResult
                             onCancelRequested: root.cancelTranslation()
-                            onDeleteRequested: root.deleteCurrentResult()
-                            onRefreshRequested: root.refreshTranslation()
+                            onDeleteRequested: { root.deleteCurrentResult(); root._focusAndSelectInput() }
+                            onRefreshRequested: { root.refreshTranslation(); root._focusAndSelectInput() }
+                            onFocusInputRequested: root._focusAndSelectInput()
                         }
 
                         Item { Layout.fillHeight: true }
