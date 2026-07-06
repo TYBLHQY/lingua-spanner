@@ -934,6 +934,13 @@ PlasmoidItem {
                                 root._ttsPlayingText = text
                                 root._ttsRetrying = false
                                 edgeTtsService.synthesize(text)
+
+                                // Auto-focus and select all input text for quick re-translate
+                                if (root.p_inputField) {
+                                    root.p_inputField.forceActiveFocus()
+                                    if (root.p_inputField.text.trim().length > 0)
+                                        root.p_inputField.selectAll()
+                                }
                             }
                         }
                     }
