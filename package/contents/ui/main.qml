@@ -872,6 +872,16 @@ PlasmoidItem {
                             Layout.fillWidth: true
                             placeholderText: i18n("Enter text to translate…")
                             font.family: root.fontFamily || undefined
+                            // 流传输中 / TTS 播放中禁止编辑输入
+                            readOnly: (root.translating && (root.currentMode === "deepseek" || root.currentMode === "siliconflow")) || root.ttsPlaying
+                            onReadOnlyChanged: {
+                                if (!readOnly) {
+                                    // 解除 readonly 后自动 focus 并全选
+                                    forceActiveFocus()
+                                    if (text.trim().length > 0)
+                                        selectAll()
+                                }
+                            }
                             onAccepted: {
                                 root.translate(text)
                                 selectAll()
