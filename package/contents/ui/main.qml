@@ -621,6 +621,19 @@ PlasmoidItem {
                 // _insertTranslation handles clearing _isRefresh/_refreshUuid
                 // internally when it takes the UPDATE (refresh) branch.
                 root._insertTranslation("deepseek", result)
+                // Auto TTS after AI translation completes
+                // Uses _ttsTargetText() (source/cleaned text) so the voice
+                // determined by sourceLang always matches the spoken text.
+                if (!wasRefresh && Plasmoid.configuration.autoTtsAfterTranslate) {
+                    var ttsText = root._ttsTargetText()
+                    if (ttsText) {
+                        root.errorMessage = ""
+                        root.ttsPlaying = true
+                        root._ttsPlayingText = ttsText
+                        root._ttsRetrying = false
+                        edgeTtsService.synthesize(ttsText)
+                    }
+                }
             } else {
                 root._isRefresh = false
                 root._refreshUuid = ""
@@ -687,6 +700,19 @@ PlasmoidItem {
                 // _insertTranslation handles clearing _isRefresh/_refreshUuid
                 // internally when it takes the UPDATE (refresh) branch.
                 root._insertTranslation("siliconflow", result)
+                // Auto TTS after AI translation completes
+                // Uses _ttsTargetText() (source/cleaned text) so the voice
+                // determined by sourceLang always matches the spoken text.
+                if (!wasRefresh && Plasmoid.configuration.autoTtsAfterTranslate) {
+                    var ttsText = root._ttsTargetText()
+                    if (ttsText) {
+                        root.errorMessage = ""
+                        root.ttsPlaying = true
+                        root._ttsPlayingText = ttsText
+                        root._ttsRetrying = false
+                        edgeTtsService.synthesize(ttsText)
+                    }
+                }
             } else {
                 root._isRefresh = false
                 root._refreshUuid = ""

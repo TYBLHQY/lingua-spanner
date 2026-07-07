@@ -27,6 +27,10 @@ KCMUtils.SimpleKCM {
     property alias cfg_autoTranslateOnSelection: autoTranslateSwitch.checked
     property bool cfg_autoTranslateOnSelectionDefault: true
 
+    // KConfig XT binding — auto TTS after AI translation
+    property alias cfg_autoTtsAfterTranslate: autoTtsSwitch.checked
+    property bool cfg_autoTtsAfterTranslateDefault: false
+
     // KConfig XT bindings — display
     property alias cfg_fontSizeBase: fontSizeSpin.value
     property int cfg_fontSizeBaseDefault: 14
@@ -336,6 +340,21 @@ KCMUtils.SimpleKCM {
             }
             PlasmaComponents3.Label {
                 text: i18n("Auto translate text selection when panel opens via shortcut")
+                Layout.fillWidth: true
+                verticalAlignment: Text.AlignVCenter
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Kirigami.Units.smallSpacing
+
+            QQC2.Switch {
+                id: autoTtsSwitch
+                Accessible.name: i18n("Auto TTS after AI translation")
+            }
+            PlasmaComponents3.Label {
+                text: i18n("Auto read translation aloud after AI translation completes")
                 Layout.fillWidth: true
                 verticalAlignment: Text.AlignVCenter
             }

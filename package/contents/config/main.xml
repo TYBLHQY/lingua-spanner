@@ -48,6 +48,10 @@
       <default>true</default>
       <label>Auto translate text selection when panel opens via shortcut</label>
     </entry>
+    <entry name="autoTtsAfterTranslate" type="Bool">
+      <default>false</default>
+      <label>Auto TTS after AI translation</label>
+    </entry>
     <entry name="modeOrder" type="String">
       <default>["youdao","deepseek","siliconflow","dictionary"]</default>
     </entry>
