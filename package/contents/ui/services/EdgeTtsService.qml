@@ -21,6 +21,10 @@ QtObject {
     property string volume: "+0%"
     property string pitch: "+0Hz"
 
+    /// Path to the edge-tts binary.
+    /// Empty string (default) = search via PATH.
+    property string binaryPath: ""
+
     // --- signals ---
 
     /// Emitted when synthesis completes successfully.
@@ -67,6 +71,11 @@ QtObject {
 
     // --- public methods ---
 
+    /// Resolve the edge-tts binary. Returns the configured path or falls back to "edge-tts".
+    function _getEdgeTtsBin() {
+        return root.binaryPath.length > 0 ? root.binaryPath : "edge-tts"
+    }
+
     /// Synthesize text into an audio file and signal completion.
     /// Returns cached audio immediately if available.
     function synthesize(text) {
@@ -85,7 +94,7 @@ QtObject {
 
         root._text = text.trim()
         root._timeoutTimer.start()
-        root.proc.runCommand("edge-tts", [
+        root.proc.runCommand(root._getEdgeTtsBin(), [
             "--text", root._text,
             "--voice", root.voice,
             "--rate", root.rate,

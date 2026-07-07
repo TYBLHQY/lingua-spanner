@@ -732,6 +732,7 @@ PlasmoidItem {
         rate: root.ttsRate
         volume: root.ttsVolume
         pitch: root.ttsPitch
+        binaryPath: Plasmoid.configuration.edgeTtsBinaryPath || ""
 
         onFinished: function(audioFilePath) {
             root.ttsPlaying = true
@@ -1004,7 +1005,7 @@ PlasmoidItem {
                             id: ttsPlayBtn
                             implicitWidth: Kirigami.Units.iconSizes.medium
                             implicitHeight: Kirigami.Units.iconSizes.medium
-                            enabled: root._ttsTargetText() !== "" && !root.translating && !root.ttsPlaying
+                            enabled: (root.currentMode === "deepseek" || root.currentMode === "siliconflow") && root._ttsTargetText() !== "" && !root.translating && !root.ttsPlaying
 
                             icon.name: "media-playback-start"
                             Accessible.name: i18n("Read aloud")

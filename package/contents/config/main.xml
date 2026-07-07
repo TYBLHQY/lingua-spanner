@@ -112,5 +112,11 @@
       <default>+0Hz</default>
       <label>TTS pitch</label>
     </entry>
+
+    <!-- Edge-TTS binary path (empty = search via PATH) -->
+    <entry name="edgeTtsBinaryPath" type="String">
+      <default></default>
+      <label>edge-tts binary path (leave empty for PATH search)</label>
+    </entry>
   </group>
 </kcfg>

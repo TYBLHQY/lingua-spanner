@@ -17,6 +17,8 @@ KCMUtils.SimpleKCM {
     id: page
 
     // KConfig XT bindings — Edge-TTS common settings
+    property string cfg_edgeTtsBinaryPath: ""
+    property string cfg_edgeTtsBinaryPathDefault: ""
     property string cfg_edgeTtsRate: "+0%"
     property string cfg_edgeTtsRateDefault: "+0%"
     property string cfg_edgeTtsVolume: "+0%"
@@ -55,6 +57,11 @@ KCMUtils.SimpleKCM {
         { id: "fr", label: i18n("Français"),  prefix: "fr-" },
         { id: "es", label: i18n("Español"),   prefix: "es-" }
     ]
+
+    // Resolve the edge-tts binary. Uses configured path, falls back to "edge-tts" (via PATH).
+    function _getEdgeTtsBin() {
+        return cfg_edgeTtsBinaryPath.length > 0 ? cfg_edgeTtsBinaryPath : "edge-tts"
+    }
 
     // Restore cached voice lists on load
     function _restoreVoiceLists() {
@@ -165,6 +172,29 @@ KCMUtils.SimpleKCM {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
+
+            // Binary path
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+
+                PlasmaComponents3.Label {
+                    text: i18n("Binary path:")
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+                }
+
+                QQC2.TextField {
+                    id: binaryPathField
+                    Layout.fillWidth: true
+                    placeholderText: "edge-tts (via PATH)"
+                    text: page.cfg_edgeTtsBinaryPath
+                    onTextChanged: page.cfg_edgeTtsBinaryPath = text
+
+                    PlasmaComponents3.ToolTip {
+                        text: i18n("Absolute path to the edge-tts executable. Leave empty to search via PATH (requires edge-tts to be installed and accessible).")
+                    }
+                }
+            }
 
             // Rate
             RowLayout {
@@ -399,7 +429,7 @@ KCMUtils.SimpleKCM {
                 }
                 onClicked: {
                     page._fetchingVoices = true
-                    _procHelper.runCommand("edge-tts", ["--list-voices"])
+                    _procHelper.runCommand(page._getEdgeTtsBin(), ["--list-voices"])
                 }
             }
         }
