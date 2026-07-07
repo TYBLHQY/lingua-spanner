@@ -48,6 +48,8 @@ Rectangle {
     Layout.fillWidth: true
     radius: Kirigami.Units.smallSpacing
     color: Kirigami.Theme.backgroundColor
+    border.color: Kirigami.Theme.alternateBackgroundColor
+    border.width: 1
     implicitHeight: youdaoCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
     ColumnLayout {
