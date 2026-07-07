@@ -72,7 +72,7 @@ Rectangle {
     Layout.fillWidth: true
     radius: Kirigami.Units.smallSpacing
     color: Kirigami.Theme.backgroundColor
-    border.color: Kirigami.Theme.alternateBackgroundColor
+    border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.15)
     border.width: 1
     implicitHeight: resultCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
