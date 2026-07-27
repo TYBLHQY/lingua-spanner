@@ -1,6 +1,6 @@
 // Lingua Spanner Diagnostic
 // Run: qml6 -I ../package/contents/lib diagnostic.qml
-// Tests: ProcessHelper (QClipboard), Youdao, DeepSeek
+// Tests: ProcessHelper (QClipboard), Youdao
 
 import QtQuick
 import QtQuick.Window
@@ -46,13 +46,13 @@ Window {
         Label { id: flowLabel; text: "Click to simulate"; color: "gray"; wrapMode: Text.WordWrap; width: parent.width }
 
         Button {
-            text: "Simulate: pick + translate"
+            text: "Simulate: pick + look up"
             onClicked: {
                 var picked = proc.readPrimarySelection()
                 if (picked && picked.trim().length > 0) {
                     flowLabel.text = "✅ Picked: \"" + picked + "\""
                     flowLabel.color = "green"
-                    flowLabel.text += "\n→ Would translate: \"" + picked.trim() + "\""
+                    flowLabel.text += "\n→ Would look up: \"" + picked.trim() + "\""
                 } else {
                     flowLabel.text = "❌ No selection found"
                     flowLabel.color = "red"
@@ -88,118 +88,7 @@ Window {
             }
         }
 
-        // DeepSeek test
-        Rectangle { width: parent.width; height: 1; color: "#ccc" }
-        Label { text: "4. DeepSeek API"; font.bold: true }
-        Label { id: dsLabel; text: "Need API key configured"; color: "gray"; wrapMode: Text.WordWrap; width: parent.width }
-        TextField { id: apiKeyInput; placeholderText: "Paste DeepSeek API key here"; width: parent.width }
-
-        Button {
-            text: "Test DeepSeek"
-            onClicked: {
-                var key = apiKeyInput.text.trim()
-                if (!key) { dsLabel.text = "❌ No API key"; dsLabel.color = "red"; return }
-                dsLabel.text = "Calling DeepSeek…"
-                var xhr = new XMLHttpRequest()
-                xhr.open("POST", "https://api.deepseek.com/chat/completions")
-                xhr.setRequestHeader("Content-Type", "application/json")
-                xhr.setRequestHeader("Authorization", "Bearer " + key)
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState !== XMLHttpRequest.DONE) return
-                    if (xhr.status === 200) {
-                        dsLabel.text = "✅ DeepSeek response received"
-                        dsLabel.color = "green"
-                    } else {
-                        dsLabel.text = "❌ HTTP " + xhr.status
-                        dsLabel.color = "red"
-                    }
-                }
-                xhr.timeout = 15000
-                xhr.send(JSON.stringify({
-                    model: "deepseek-chat",
-                    messages: [
-                        { role: "system", content: "Translate to Chinese." },
-                        { role: "user", content: "Hello, world!" }
-                    ],
-                    temperature: 0.3,
-                    max_tokens: 100
-                }))
-            }
-        }
-
         Item { height: 20 }
         Label { text: "Tip: Select text in another window, then click 'Read PRIMARY'"; color: "gray"; font.italic: true; wrapMode: Text.WordWrap; width: parent.width }
-
-        // SQLite CRUD test
-        Rectangle { width: parent.width; height: 1; color: "#ccc" }
-        Label { text: "5. SQLite CRUD"; font.bold: true }
-        Label { id: sqlLabel; text: "not tested"; color: "gray"; wrapMode: Text.WordWrap; width: parent.width }
-
-        Row {
-            spacing: 6
-            Button {
-                text: "Init DB"
-                onClicked: {
-                    proc.initDb()
-                    sqlLabel.text = "✅ DB initialized"
-                    sqlLabel.color = "green"
-                }
-            }
-            Button {
-                text: "INSERT test"
-                onClicked: {
-                    try {
-                        proc.initDb()
-                        proc.exec("DELETE FROM translations WHERE engine='test'", "[]")
-                            proc.exec("INSERT INTO translations(input_text,engine,source_lang,target_lang,result_json) VALUES(?,?,?,?,?)",
-                            JSON.stringify(["hello","test","","","world"]))
-                        sqlLabel.text = "✅ INSERT OK"
-                        sqlLabel.color = "green"
-                    } catch(e) {
-                        sqlLabel.text = "❌ " + e
-                        sqlLabel.color = "red"
-                    }
-                }
-            }
-            Button {
-                text: "SELECT test"
-                onClicked: {
-                    try {
-                        proc.initDb()
-                        var json = proc.exec("SELECT * FROM translations WHERE engine='test'", "[]")
-                        var rows = JSON.parse(json)
-                        sqlLabel.text = "✅ SELECT: " + rows.length + " rows\n" + JSON.stringify(rows, null, 2)
-                        sqlLabel.color = "green"
-                    } catch(e) {
-                        sqlLabel.text = "❌ " + e
-                        sqlLabel.color = "red"
-                    }
-                }
-            }
-            Button {
-                text: "DELETE test"
-                onClicked: {
-                    try {
-                        proc.initDb()
-                        proc.exec("DELETE FROM translations WHERE engine='test'", "[]")
-                        var json = proc.exec("SELECT * FROM translations WHERE engine='test'", "[]")
-                        var rows = JSON.parse(json)
-                        sqlLabel.text = "✅ DELETE OK, rows left: " + rows.length
-                        sqlLabel.color = "green"
-                    } catch(e) {
-                        sqlLabel.text = "❌ " + e
-                        sqlLabel.color = "red"
-                    }
-                }
-            }
-            Button {
-                text: "Close DB"
-                onClicked: {
-                    proc.closeDb()
-                    sqlLabel.text = "✅ DB closed"
-                    sqlLabel.color = "green"
-                }
-            }
-        }
     }
 }

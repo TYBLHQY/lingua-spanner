@@ -1,15 +1,12 @@
-// Process Helper — QClipboard PRIMARY selection + SQLite
+// Process Helper — QClipboard PRIMARY selection
 // Reads PRIMARY selection via QClipboard, no external xclip needed.
 // Tracks selection change timestamps for freshness checks.
-// Provides SQLite CRUD for query result persistence.
 
 #ifndef PROCESSHELPER_H
 #define PROCESSHELPER_H
 
 #include <QObject>
 #include <QtQml>
-
-#include <QSqlDatabase>
 
 class QProcess;
 
@@ -30,17 +27,6 @@ public:
 
     /// Last PRIMARY selection change timestamp (ms since epoch).
     qint64 selectionTimestamp() const { return m_selectionTimestamp; }
-
-    // SQLite
-    /// Open/create ~/.config/linguaspanner/linguaspanner.db and ensure schema.
-    Q_INVOKABLE void initDb();
-
-    /// Execute a SQL statement with optional JSON array of positional params.
-    /// Returns JSON array of row objects for SELECT; empty string otherwise.
-    Q_INVOKABLE QString exec(const QString &sql, const QString &jsonParams = "[]");
-
-    /// Close the database connection.
-    Q_INVOKABLE void closeDb();
 
     // Process execution
     /// Run a command asynchronously via QProcess.
@@ -83,10 +69,8 @@ signals:
     void commandError(QString errorMessage);
 
 private:
-    QString dbFilePath() const;
     QString configFilePath() const;
     qint64 m_selectionTimestamp = 0;
-    QSqlDatabase m_db;
     QProcess *m_process = nullptr;
 };
 
