@@ -117,6 +117,25 @@ QtObject {
             }
         }
 
+        // If no results with pos tag, try without pos tag
+        // (phrase/compound word lookup, e.g. "mutual benefit", "look up")
+        if (exp.length === 0) {
+            var wordExpNoPosRegex = /<li[^>]*word-exp[^>]*>.*?class="trans"[^>]*>([\s\S]*?)<\/span>/gi
+            while ((match = wordExpNoPosRegex.exec(html)) !== null) {
+                var trRawNoPos = match[1].trim()
+                // Replace ； with <br> for inline line breaks within a single tr entry
+                trRawNoPos = trRawNoPos.replace(/；/g, "<br>")
+                var trNoPos = [trRawNoPos.trim()].filter(function(s) { return s.length > 0 })
+                if (trNoPos.length > 0) {
+                    var keyNoPos = "|" + trNoPos.join(";")
+                    if (!seen[keyNoPos]) {
+                        seen[keyNoPos] = true
+                        exp.push({ po: "", tr: trNoPos })
+                    }
+                }
+            }
+        }
+
         // If no English results, try Chinese source: .word-exp-ce
         if (exp.length === 0) {
             var wordExpCeRegex = /<li[^>]*word-exp-ce[^>]*>.*?class="point"[^>]*>([\s\S]*?)<\/a>.*?class="word-exp_tran[^"]*"[^>]*>([\s\S]*?)<\/div>/gi
