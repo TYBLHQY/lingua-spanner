@@ -364,13 +364,19 @@ PlasmoidItem {
                 Layout.bottomMargin: Kirigami.Units.largeSpacing
                 implicitHeight: Kirigami.Units.iconSizes.medium
 
-                text: i18n("Read aloud")
-                icon.name: "media-playback-start"
-                enabled: root.inputText !== "" && !root.translating && !root.ttsPlaying
+                text: root.ttsPlaying ? i18n("Stop") : i18n("Read aloud")
+                icon.name: root.ttsPlaying ? "media-playback-stop" : "media-playback-start"
+                enabled: root.ttsPlaying || (!root.translating && inputField.text.trim().length > 0)
 
                 onClicked: {
-                    var text = root.inputText
-                    if (!text || text.trim().length === 0) return
+                    // While TTS is running this button stops it instead.
+                    if (root.ttsPlaying) {
+                        root.stopTts()
+                        return
+                    }
+
+                    var text = inputField.text.trim()
+                    if (text.length === 0) return
 
                     root.errorMessage = ""
                     root.ttsPlaying = true
