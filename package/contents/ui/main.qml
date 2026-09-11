@@ -294,69 +294,28 @@ PlasmoidItem {
             anchors.fill: parent
             spacing: 0
 
-            // Input area
-            Item {
+            // Input field
+            QQC2.TextField {
+                id: inputField
                 Layout.fillWidth: true
                 Layout.topMargin: Kirigami.Units.largeSpacing
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
-                implicitHeight: inputRow.implicitHeight
-
-                RowLayout {
-                    id: inputRow
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-
-                    QQC2.TextField {
-                        id: inputField
-                        Layout.fillWidth: true
-                        placeholderText: i18n("Enter text to look up…")
-                        font.family: root.fontFamily || undefined
-                        readOnly: root.ttsPlaying
-                        onReadOnlyChanged: {
-                            if (!readOnly) {
-                                forceActiveFocus()
-                                if (text.trim().length > 0)
-                                    selectAll()
-                            }
-                        }
-                        onAccepted: {
-                            root.translate(text)
+                placeholderText: i18n("Enter text to look up…")
+                font.family: root.fontFamily || undefined
+                readOnly: root.ttsPlaying
+                onReadOnlyChanged: {
+                    if (!readOnly) {
+                        forceActiveFocus()
+                        if (text.trim().length > 0)
                             selectAll()
-                        }
-                        Component.onCompleted: root.p_inputField = inputField
-                    }
-
-                    // TTS Play / Stop button
-                    QQC2.Button {
-                        id: ttsPlayBtn
-                        implicitWidth: Kirigami.Units.iconSizes.medium
-                        implicitHeight: Kirigami.Units.iconSizes.medium
-                        enabled: root.inputText !== "" && !root.translating && !root.ttsPlaying
-
-                        icon.name: "media-playback-start"
-                        Accessible.name: i18n("Read aloud")
-
-                        QQC2.ToolTip {
-                            text: i18n("Read aloud")
-                            delay: Kirigami.Units.toolTipDelay
-                            visible: hovered
-                        }
-
-                        onClicked: {
-                            var text = root.inputText
-                            if (!text || text.trim().length === 0) return
-
-                            root.errorMessage = ""
-                            root.ttsPlaying = true
-                            root._ttsPlayingText = text
-                            root._ttsRetrying = false
-                            edgeTtsService.synthesize(text)
-
-                            root._focusAndSelectInput()
-                        }
                     }
                 }
+                onAccepted: {
+                    root.translate(text)
+                    selectAll()
+                }
+                Component.onCompleted: root.p_inputField = inputField
             }
 
             // Results area
@@ -366,7 +325,7 @@ PlasmoidItem {
                 Layout.topMargin: Kirigami.Units.smallSpacing
                 Layout.leftMargin: Kirigami.Units.largeSpacing
                 Layout.rightMargin: Kirigami.Units.largeSpacing
-                Layout.bottomMargin: Kirigami.Units.largeSpacing
+                Layout.bottomMargin: Kirigami.Units.smallSpacing
                 clip: true
                 contentWidth: availableWidth
                 QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AlwaysOff
@@ -391,6 +350,33 @@ PlasmoidItem {
                     }
 
                     Item { Layout.fillHeight: true }
+                }
+            }
+
+            // TTS bar — full-width, pinned to the bottom of the panel
+            QQC2.Button {
+                id: ttsPlayBtn
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.largeSpacing
+                Layout.rightMargin: Kirigami.Units.largeSpacing
+                Layout.bottomMargin: Kirigami.Units.largeSpacing
+                implicitHeight: Kirigami.Units.iconSizes.medium
+
+                text: i18n("Read aloud")
+                icon.name: "media-playback-start"
+                enabled: root.inputText !== "" && !root.translating && !root.ttsPlaying
+
+                onClicked: {
+                    var text = root.inputText
+                    if (!text || text.trim().length === 0) return
+
+                    root.errorMessage = ""
+                    root.ttsPlaying = true
+                    root._ttsPlayingText = text
+                    root._ttsRetrying = false
+                    edgeTtsService.synthesize(text)
+
+                    root._focusAndSelectInput()
                 }
             }
         }
