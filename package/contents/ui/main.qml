@@ -135,12 +135,7 @@ PlasmoidItem {
             return
         }
 
-        if (p_inputField) {
-            p_inputField.forceActiveFocus()
-            if (p_inputField.text.trim().length > 0) {
-                p_inputField.selectAll()
-            }
-        }
+        root._focusAndSelectInput()
     }
 
     /// Handles selection result
@@ -150,12 +145,7 @@ PlasmoidItem {
 
         if (!text || text.trim().length === 0 || !isFresh) {
             console.log("selection ready, fresh=", isFresh, "elapsed=", elapsed, "ms — focusing input")
-            if (p_inputField) {
-                p_inputField.forceActiveFocus()
-                if (p_inputField.text.trim().length > 0) {
-                    p_inputField.selectAll()
-                }
-            }
+            root._focusAndSelectInput()
             return
         }
 
@@ -337,20 +327,6 @@ PlasmoidItem {
                         Component.onCompleted: root.p_inputField = inputField
                     }
 
-                    QQC2.Button {
-                        icon.name: "translate"
-                        implicitWidth: Kirigami.Units.iconSizes.medium
-                        implicitHeight: Kirigami.Units.iconSizes.medium
-                        enabled: !root.translating && inputField.text.trim().length > 0
-                        Accessible.name: i18n("Look up")
-                        QQC2.ToolTip {
-                            text: i18n("Look up")
-                            delay: Kirigami.Units.toolTipDelay
-                            visible: hovered
-                        }
-                        onClicked: { root.translate(inputField.text); root._focusAndSelectInput() }
-                    }
-
                     // TTS Play / Stop button
                     QQC2.Button {
                         id: ttsPlayBtn
@@ -377,26 +353,7 @@ PlasmoidItem {
                             root._ttsRetrying = false
                             edgeTtsService.synthesize(text)
 
-                            if (root.p_inputField) {
-                                root.p_inputField.forceActiveFocus()
-                                if (root.p_inputField.text.trim().length > 0)
-                                    root.p_inputField.selectAll()
-                            }
-                        }
-                    }
-
-                    QQC2.Button {
-                        icon.name: root.pinned ? "window-pin" : "window-unpin"
-                        implicitWidth: Kirigami.Units.iconSizes.medium
-                        implicitHeight: Kirigami.Units.iconSizes.medium
-                        onClicked: { root.pinned = !root.pinned; root._focusAndSelectInput() }
-                        Accessible.name: root.pinned ? i18n("Unpin") : i18n("Pin")
-                        QQC2.ToolTip {
-                            text: root.pinned
-                                ? i18n("Keep open when switching windows")
-                                : i18n("Pin panel open")
-                            delay: Kirigami.Units.toolTipDelay
-                            visible: hovered
+                            root._focusAndSelectInput()
                         }
                     }
                 }
