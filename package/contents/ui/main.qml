@@ -318,7 +318,7 @@ PlasmoidItem {
                 Component.onCompleted: root.p_inputField = inputField
             }
 
-            // Results area
+            // Results area — scrolls freely between the input field and the TTS bar
             QQC2.ScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -342,6 +342,8 @@ PlasmoidItem {
                         font.italic: true
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
+                        Layout.leftMargin: Kirigami.Units.smallSpacing
+                        Layout.rightMargin: Kirigami.Units.smallSpacing
                     }
 
                     // Youdao result

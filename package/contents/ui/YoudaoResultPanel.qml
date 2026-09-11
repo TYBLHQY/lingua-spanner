@@ -1,5 +1,6 @@
 // Youdao dictionary result panel (extracted from main.qml)
 // Renders dictionary definitions, exam types, and word forms.
+// Content only — no frame or background of its own.
 
 import QtQuick
 import QtQuick.Layouts
@@ -7,7 +8,7 @@ import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.components as PlasmaComponents3
 
-Rectangle {
+Item {
     id: pane
 
     // --- public properties ---
@@ -44,10 +45,6 @@ Rectangle {
     // --- layout ---
     visible: pane.result !== null
     Layout.fillWidth: true
-    radius: Kirigami.Units.smallSpacing
-    color: Kirigami.Theme.backgroundColor
-    border.color: Kirigami.Theme.focusColor
-    border.width: 1
     implicitHeight: youdaoCol.implicitHeight + Kirigami.Units.smallSpacing * 2
 
     ColumnLayout {
