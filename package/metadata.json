@@ -6,7 +6,7 @@
         "Description": "Youdao web dictionary look-up with Edge-TTS pronunciation",
         "Description[zh_CN]": "有道词典网页查词 — 选中文本一键查词 + Edge-TTS 语音朗读",
         "Icon": "translate",
-        "Version": "1.5.5",
+        "Version": "2.0.0",
         "License": "GPL-2.0-or-later",
         "Authors": [
             {
