@@ -77,15 +77,23 @@ PlasmoidItem {
         }
     }
 
+    /// Stop any in-flight TTS. Synthesis (edge-tts) and playback (paplay) run
+    /// as two separate processes, and either one may be the one currently
+    /// running — cancelling an idle one is a no-op.
+    function stopTts() {
+        edgeTtsService.cancel()
+        ttsAudioPlayer.cancelCommand()
+        root.ttsPlaying = false
+        root._ttsPlayingText = ""
+        root._ttsRetrying = false
+    }
+
     function translate(text) {
         if (!text || text.trim().length === 0) return
         var t = text.trim()
         if (root.translating) return
-        // Cancel any ongoing TTS when starting a new translation
-        if (root.ttsPlaying) {
-            edgeTtsService.cancel()
-            root.ttsPlaying = false
-        }
+        // Stop any ongoing TTS when starting a new translation
+        if (root.ttsPlaying) root.stopTts()
         inputText = t
         translating = true
         errorMessage = ""
