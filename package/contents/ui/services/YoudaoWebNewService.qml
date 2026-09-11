@@ -70,7 +70,7 @@ QtObject {
 
         // Extract .modules content
         var modStart = html.indexOf('<div class="modules">')
-        if (modStart < 0) return { word: word, exp: [], examType: [], audio: [], form: [] }
+        if (modStart < 0) return { word: word, exp: [], examType: [], form: [] }
         modStart += '<div class="modules">'.length
 
         // Track nesting depth to find matching closing </div>
@@ -191,21 +191,6 @@ QtObject {
             examTypes.push(match[1].trim())
         }
 
-        // Extract audio
-        var audio = []
-        // Look for .per-phone blocks
-        var perPhoneRegex = /<div[^>]*class="per-phone"[^>]*>[\s\S]*?<span[^>]*class="phonetic"[^>]*>([\s\S]*?)<\/span>/gi
-        var phoneIdx = 0
-        while ((match = perPhoneRegex.exec(html)) !== null) {
-            var phonetic = match[1].trim()
-            var type = phoneIdx === 0 ? 1 : 2 // 1=uk, 2=us
-            audio.push({
-                text: phonetic,
-                url: "https://dict.youdao.com/dictvoice?audio=" + encodeURIComponent(word) + "&type=" + type
-            })
-            phoneIdx++
-        }
-
         // Extract word forms
         var forms = []
         var formRegex = /<li[^>]*class="word-wfs-cell-less"[^>]*>[\s\S]*?<span[^>]*class="wfs-name"[^>]*>([\s\S]*?)<\/span>[\s\S]*?<span[^>]*class="transformation"[^>]*>([\s\S]*?)<\/span>/gi
@@ -220,7 +205,6 @@ QtObject {
             word: word,
             exp: exp,
             examType: examTypes,
-            audio: audio,
             form: forms
         }
     }

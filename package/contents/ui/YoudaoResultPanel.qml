@@ -1,10 +1,8 @@
 // Youdao dictionary result panel (extracted from main.qml)
-// Renders dictionary definitions, audio, exam types, and word forms.
+// Renders dictionary definitions, exam types, and word forms.
 
 import QtQuick
-import QtQuick.Controls as QQC2
 import QtQuick.Layouts
-import QtMultimedia
 
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.components as PlasmaComponents3
@@ -67,51 +65,6 @@ Rectangle {
             color: Kirigami.Theme.disabledTextColor
             font.italic: true
             Layout.fillWidth: true
-        }
-
-        // Audio bar
-        Rectangle {
-            visible: pane.result && pane.result.audio && pane.result.audio.length > 0
-            Layout.fillWidth: true
-            color: Kirigami.Theme.backgroundColor
-            border.color: Kirigami.Theme.disabledTextColor
-            border.width: 1
-            radius: Kirigami.Units.smallSpacing
-            implicitHeight: audioRow.implicitHeight + Kirigami.Units.smallSpacing
-
-            RowLayout {
-                id: audioRow
-                anchors {
-                    fill: parent
-                    leftMargin: Kirigami.Units.smallSpacing
-                    rightMargin: Kirigami.Units.smallSpacing
-                }
-                spacing: Kirigami.Units.smallSpacing
-
-                Repeater {
-                    model: pane.result ? pane.result.audio : []
-
-                    delegate: QQC2.Button {
-                        required property var modelData
-                        text: modelData.text
-                        icon.name: "media-playback-start"
-                        flat: true
-                        Accessible.name: i18n("Play pronunciation")
-                        Layout.fillWidth: true
-                        onClicked: {
-                            audioPlayer.source = modelData.url
-                            audioPlayer.play()
-                        }
-                    }
-                }
-            }
-
-            MediaPlayer {
-                id: audioPlayer
-                audioOutput: AudioOutput {}
-                onErrorOccurred: console.log("audioPlayer error:", error, errorString)
-                onPlaybackStateChanged: console.log("audioPlayer state:", playbackState)
-            }
         }
 
         // Exam type tags
