@@ -72,6 +72,10 @@ private:
     QString configFilePath() const;
     qint64 m_selectionTimestamp = 0;
     QProcess *m_process = nullptr;
+
+    /// True while cancelCommand() is killing the running process, so the
+    /// resulting crash signals are not reported as errors.
+    bool m_cancelled = false;
 };
 
 #endif // PROCESHELPER_H

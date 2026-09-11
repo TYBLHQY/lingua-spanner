@@ -86,27 +86,51 @@ void ProcessHelper::runCommand(const QString &command, const QStringList &args)
     if (!m_process)
         m_process = new QProcess(this);
 
+    // Handlers below work on this local pointer, never on m_process: a killed
+    // process makes QProcess emit errorOccurred(Crashed) *and* finished(), and
+    // whichever handler runs first clears m_process — so a handler that read
+    // m_process would dereference null.
+    QProcess *proc = m_process;
+    m_cancelled = false;
+
     // Finished (normal exit or crash)
-    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-        this, [this](int exitCode, QProcess::ExitStatus status) {
-            QString stdOut = QString::fromUtf8(m_process->readAllStandardOutput());
-            QString stdErr = QString::fromUtf8(m_process->readAllStandardError());
+    connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+        this, [this, proc](int exitCode, QProcess::ExitStatus status) {
+            if (proc != m_process)
+                return; // already handled by the errorOccurred handler
+            QString stdOut = QString::fromUtf8(proc->readAllStandardOutput());
+            QString stdErr = QString::fromUtf8(proc->readAllStandardError());
+            m_process = nullptr;
+            proc->deleteLater();
+            if (m_cancelled) {
+                m_cancelled = false; // a deliberate cancel is not an error
+                return;
+            }
             if (status == QProcess::CrashExit) {
                 emit commandError(QStringLiteral("Process crashed (exit code %1)").arg(exitCode));
             } else {
                 emit commandFinished(exitCode, stdOut.trimmed(), stdErr.trimmed());
             }
-            m_process->deleteLater();
-            m_process = nullptr;
         });
 
     // Failed to start, timed out, etc.
-    connect(m_process, &QProcess::errorOccurred,
-        this, [this, command](QProcess::ProcessError error) {
+    connect(proc, &QProcess::errorOccurred,
+        this, [this, proc, command](QProcess::ProcessError error) {
+            if (proc != m_process)
+                return; // already handled by the finished handler
+            m_process = nullptr;
+            proc->deleteLater();
+            if (m_cancelled) {
+                m_cancelled = false; // a deliberate cancel is not an error
+                return;
+            }
             QString msg;
             switch (error) {
             case QProcess::FailedToStart:
                 msg = command + QStringLiteral(": command not found or failed to start.\nPlease install: pip install edge-tts");
+                break;
+            case QProcess::Crashed:
+                msg = QStringLiteral("Process crashed");
                 break;
             case QProcess::Timedout:
                 msg = QStringLiteral("Command timed out");
@@ -116,16 +140,15 @@ void ProcessHelper::runCommand(const QString &command, const QStringList &args)
                 break;
             }
             emit commandError(msg);
-            m_process->deleteLater();
-            m_process = nullptr;
         });
 
-    m_process->start(command, args);
+    proc->start(command, args);
 }
 
 void ProcessHelper::cancelCommand()
 {
     if (m_process && m_process->state() != QProcess::NotRunning) {
+        m_cancelled = true;
         m_process->kill();
         m_process->waitForFinished(3000);
     }
