@@ -5,39 +5,6 @@
         http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
   <kcfgfile name=""/>
   <group name="General">
-    <entry name="deepseekApiKey" type="String">
-      <default></default>
-    </entry>
-    <entry name="deepseekModelList" type="String">
-      <default></default>
-    </entry>
-    <entry name="deepseekModel" type="String">
-      <default>deepseek-v4-flash</default>
-    </entry>
-    <entry name="deepseekTemperature" type="Double">
-      <default>1.0</default>
-    </entry>
-    <entry name="deepseekMaxTokens" type="Int">
-      <default>4096</default>
-    </entry>
-    <entry name="deepseekTopP" type="Double">
-      <default>1.0</default>
-    </entry>
-    <entry name="deepseekStream" type="Bool">
-      <default>true</default>
-    </entry>
-    <entry name="siliconFlowApiKey" type="String">
-      <default></default>
-    </entry>
-    <entry name="siliconFlowModelList" type="String">
-      <default></default>
-    </entry>
-    <entry name="siliconFlowModel" type="String">
-      <default>deepseek-ai/DeepSeek-V4-Flash</default>
-    </entry>
-    <entry name="siliconFlowStream" type="Bool">
-      <default>true</default>
-    </entry>
     <entry name="shortcutOpen" type="String">
       <default>Meta+1</default>
     </entry>
@@ -48,16 +15,6 @@
       <default>true</default>
       <label>Auto translate text selection when panel opens via shortcut</label>
     </entry>
-    <entry name="autoTtsAfterTranslate" type="Bool">
-      <default>false</default>
-      <label>Auto TTS after AI translation</label>
-    </entry>
-    <entry name="modeOrder" type="String">
-      <default>["youdao","deepseek","siliconflow","dictionary"]</default>
-    </entry>
-    <entry name="modeEnabled" type="String">
-      <default>["youdao","deepseek","siliconflow","dictionary"]</default>
-    </entry>
     <entry name="fontSizeBase" type="Int">
       <default>14</default>
     </entry>
@@ -65,17 +22,11 @@
       <default></default>
     </entry>
 
-    <!-- TTS modes (JSON array string, same pattern as modeOrder/modeEnabled) -->
-    <entry name="ttsModeOrder" type="String">
-      <default>["edge-tts"]</default>
-      <label>TTS engine order</label>
-    </entry>
-    <entry name="ttsModeEnabled" type="String">
-      <default>["edge-tts"]</default>
-      <label>Enabled TTS engines</label>
-    </entry>
-
     <!-- Edge-TTS settings -->
+    <entry name="edgeTtsBinaryPath" type="String">
+      <default></default>
+      <label>edge-tts binary path (leave empty for PATH search)</label>
+    </entry>
     <entry name="edgeTtsVoiceEn" type="String">
       <default>en-US-EmmaMultilingualNeural</default>
       <label>English TTS voice</label>
@@ -115,12 +66,6 @@
     <entry name="edgeTtsPitch" type="String">
       <default>+0Hz</default>
       <label>TTS pitch</label>
-    </entry>
-
-    <!-- Edge-TTS binary path (empty = search via PATH) -->
-    <entry name="edgeTtsBinaryPath" type="String">
-      <default></default>
-      <label>edge-tts binary path (leave empty for PATH search)</label>
     </entry>
   </group>
 </kcfg>
