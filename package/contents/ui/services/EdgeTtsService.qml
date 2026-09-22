@@ -25,6 +25,10 @@ QtObject {
     /// Empty string (default) = search via PATH.
     property string binaryPath: ""
 
+    /// Optional HTTP proxy passed explicitly to edge-tts. This is needed when
+    /// Plasma was started without the proxy environment inherited by a shell.
+    property string proxy: ""
+
     // --- signals ---
 
     /// Emitted when synthesis completes successfully.
@@ -94,14 +98,17 @@ QtObject {
 
         root._text = text.trim()
         root._timeoutTimer.start()
-        root.proc.runCommand(root._getEdgeTtsBin(), [
+        var args = [
             "--text", root._text,
             "--voice", root.voice,
             "--rate", root.rate,
             "--volume", root.volume,
-            "--pitch", root.pitch,
-            "--write-media", cachePath
-        ])
+            "--pitch", root.pitch
+        ]
+        if (root.proxy.trim().length > 0)
+            args.push("--proxy", root.proxy.trim())
+        args.push("--write-media", cachePath)
+        root.proc.runCommand(root._getEdgeTtsBin(), args)
     }
 
     /// Cancel the current TTS command.

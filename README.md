@@ -29,6 +29,7 @@ make install
 ## 配置
 
 - 系统设置 → 桌面部件 → Lingua Spanner
+- Edge-TTS 默认通过本机 Mihomo HTTP 代理 `http://127.0.0.1:7890`；端口不同可在设置中修改
 - 快捷键：系统设置 → 快捷键 → Lingua Spanner（默认 Meta+1 打开面板，Meta+2 取词查词）
 
 ## 许可

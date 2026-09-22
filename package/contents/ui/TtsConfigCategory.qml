@@ -19,6 +19,8 @@ KCMUtils.SimpleKCM {
     // KConfig XT bindings — Edge-TTS common settings
     property string cfg_edgeTtsBinaryPath: ""
     property string cfg_edgeTtsBinaryPathDefault: ""
+    property string cfg_edgeTtsProxy: "http://127.0.0.1:7890"
+    property string cfg_edgeTtsProxyDefault: "http://127.0.0.1:7890"
     property string cfg_edgeTtsRate: "+0%"
     property string cfg_edgeTtsRateDefault: "+0%"
     property string cfg_edgeTtsVolume: "+0%"
@@ -61,6 +63,19 @@ KCMUtils.SimpleKCM {
     // Resolve the edge-tts binary. Uses configured path, falls back to "edge-tts" (via PATH).
     function _getEdgeTtsBin() {
         return cfg_edgeTtsBinaryPath.length > 0 ? cfg_edgeTtsBinaryPath : "edge-tts"
+    }
+
+    // Keep voice-list requests consistent with synthesis requests.
+    function _edgeTtsArgs(args) {
+        var result = []
+        var proxy = page.cfg_edgeTtsProxy.trim()
+        if (proxy.length === 0)
+            proxy = page.cfg_edgeTtsProxyDefault.trim()
+        if (proxy.length > 0)
+            result.push("--proxy", proxy)
+        for (var i = 0; i < args.length; i++)
+            result.push(args[i])
+        return result
     }
 
     // Restore cached voice lists on load
@@ -192,6 +207,29 @@ KCMUtils.SimpleKCM {
 
                     PlasmaComponents3.ToolTip {
                         text: i18n("Absolute path to the edge-tts executable. Leave empty to search via PATH (requires edge-tts to be installed and accessible).")
+                    }
+                }
+            }
+
+            // HTTP proxy
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+
+                PlasmaComponents3.Label {
+                    text: i18n("Proxy:")
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+                }
+
+                QQC2.TextField {
+                    id: proxyField
+                    Layout.fillWidth: true
+                    placeholderText: "http://127.0.0.1:7890 (Mihomo)"
+                    text: page.cfg_edgeTtsProxy || page.cfg_edgeTtsProxyDefault
+                    onTextChanged: page.cfg_edgeTtsProxy = text
+
+                    PlasmaComponents3.ToolTip {
+                        text: i18n("Optional HTTP proxy passed to edge-tts. Set this when the app cannot resolve speech.platform.bing.com, for example http://127.0.0.1:7890.")
                     }
                 }
             }
@@ -429,7 +467,7 @@ KCMUtils.SimpleKCM {
                 }
                 onClicked: {
                     page._fetchingVoices = true
-                    _procHelper.runCommand(page._getEdgeTtsBin(), ["--list-voices"])
+                    _procHelper.runCommand(page._getEdgeTtsBin(), page._edgeTtsArgs(["--list-voices"]))
                 }
             }
         }
@@ -453,7 +491,7 @@ KCMUtils.SimpleKCM {
             // No cached data — trigger fetch
             Qt.callLater(function() {
                 page._fetchingVoices = true
-                _procHelper.runCommand("edge-tts", ["--list-voices"])
+                _procHelper.runCommand(page._getEdgeTtsBin(), page._edgeTtsArgs(["--list-voices"]))
             })
         }
     }

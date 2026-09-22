@@ -41,6 +41,9 @@ PlasmoidItem {
     readonly property string ttsRate: Plasmoid.configuration.edgeTtsRate || "+0%"
     readonly property string ttsVolume: Plasmoid.configuration.edgeTtsVolume || "+0%"
     readonly property string ttsPitch: Plasmoid.configuration.edgeTtsPitch || "+0Hz"
+    // Existing plasmoid instances may not have this newly-added key saved yet.
+    // Fall back to the local Mihomo HTTP port used by this desktop setup.
+    readonly property string ttsProxy: Plasmoid.configuration.edgeTtsProxy || "http://127.0.0.1:7890"
 
     // Font sizes (from config)
     readonly property int fontSizeBase: Plasmoid.configuration.fontSizeBase || 14
@@ -178,6 +181,7 @@ PlasmoidItem {
         rate: root.ttsRate
         volume: root.ttsVolume
         pitch: root.ttsPitch
+        proxy: root.ttsProxy
         binaryPath: Plasmoid.configuration.edgeTtsBinaryPath || ""
 
         onFinished: function(audioFilePath) {
