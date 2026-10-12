@@ -30,6 +30,8 @@ make install
 
 - 系统设置 → 桌面部件 → Lingua Spanner
 - Edge-TTS 默认通过本机 Mihomo HTTP 代理 `http://127.0.0.1:7890`；端口不同可在设置中修改
+- 朗读和声音列表支持 `speech.platform.bing.com` / `api.msedgeservices.com` 双向自动回退：接口拒绝、连接失败、超时或未收到音频时，切换另一个接口重试一次；分别记住上次成功的接口。每个接口最多等待 35 秒，朗读总超时 75 秒。
+- 回退脚本随插件安装，使用所配置 `edge-tts` 的 Python 环境，不修改第三方依赖。接口偏好保存在 `~/.cache/linguaspanner/edge-tts/endpoints.json`（遵循 `XDG_CACHE_HOME`）；删除该文件即可重置。
 - 快捷键：系统设置 → 快捷键 → Lingua Spanner（默认 Meta+1 打开面板，Meta+2 取词查词）
 
 ## 许可

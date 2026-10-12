@@ -25,7 +25,14 @@ jobs:
             cmake \
             g++ \
             jq \
+            python3-venv \
             libgl1-mesa-dev
+
+      - name: Test Edge-TTS endpoint fallback
+        run: |
+          python3 -m venv /tmp/lingua-tts-tests
+          /tmp/lingua-tts-tests/bin/pip install edge-tts==7.2.8
+          /tmp/lingua-tts-tests/bin/python -m unittest discover -s tests -p 'test_*.py' -v
 
       - name: Install Qt 6.7
         uses: jurplel/install-qt-action@v4

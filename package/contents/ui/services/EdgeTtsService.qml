@@ -1,5 +1,5 @@
 // Edge-TTS Text-to-Speech Service
-// Calls the edge-tts CLI via ProcessHelper for async command execution.
+// Runs the packaged endpoint-fallback helper via ProcessHelper.
 // Caches generated audio by text+voice hash to avoid repeated synthesis.
 // Requires: pip install edge-tts
 // GitHub: https://github.com/rany2/edge-tts
@@ -42,6 +42,7 @@ QtObject {
 
     property string _text: ""
     property bool _connected: false
+    property string _pendingMediaPath: ""
 
     // --- cache ---
 
@@ -52,7 +53,7 @@ QtObject {
     readonly property int _maxCacheFiles: 100
 
     property Timer _timeoutTimer: Timer {
-        interval: 40000
+        interval: 75000
         onTriggered: root._onTimeout()
     }
 
@@ -88,6 +89,7 @@ QtObject {
             return
         }
         root._ensureConnected()
+        root.cancel()
 
         var cachePath = root._cachePath(text)
         if (root.proc.fileExists(cachePath)) {
@@ -97,6 +99,7 @@ QtObject {
         }
 
         root._text = text.trim()
+        root._pendingMediaPath = root.proc.cacheFilePath("tts_pending", ".mp3")
         root._timeoutTimer.start()
         var args = [
             "--text", root._text,
@@ -108,16 +111,25 @@ QtObject {
         if (root.proxy.trim().length > 0)
             args.push("--proxy", root.proxy.trim())
         args.push("--write-media", cachePath)
-        root.proc.runCommand(root._getEdgeTtsBin(), args)
+        var helperPath = decodeURIComponent(Qt.resolvedUrl("../../scripts/edge_tts_fallback.py").toString().replace(/^file:\/\//, ""))
+        root.proc.runCommand("python3", [helperPath, "--edge-tts-binary", root._getEdgeTtsBin(), "--temporary-media", root._pendingMediaPath, "--"].concat(args))
     }
 
     /// Cancel the current TTS command.
     function cancel() {
         root._timeoutTimer.stop()
         root.proc.cancelCommand()
+        root._removePendingMedia()
     }
 
     // --- private ---
+
+    function _removePendingMedia() {
+        if (root._pendingMediaPath.length > 0) {
+            root.proc.removeFile(root._pendingMediaPath)
+            root._pendingMediaPath = ""
+        }
+    }
 
     function _ensureConnected() {
         if (root._connected) return
@@ -128,6 +140,7 @@ QtObject {
 
     function _onFinished(exitCode, stdOut, stdErr) {
         root._timeoutTimer.stop()
+        root._removePendingMedia()
         if (exitCode === 0) {
             // Trim cache on each new addition so we never exceed the limit.
             root.proc.cleanTtsCache(root._cacheDir, root._maxCacheFiles)
@@ -151,15 +164,17 @@ QtObject {
 
     function _onError(errorMessage) {
         root._timeoutTimer.stop()
+        root._removePendingMedia()
         root.error(errorMessage)
     }
 
     function _onTimeout() {
         root.proc.cancelCommand()
+        root._removePendingMedia()
         // Remove the partial cache file on timeout
         var badPath = root._cachePath(root._text)
         if (root.proc.fileExists(badPath))
             root.proc.removeFile(badPath)
-        root.error(qsTr("Edge-TTS timed out (40s)"))
+        root.error(qsTr("Edge-TTS timed out (75s, including endpoint fallback)"))
     }
 }

@@ -65,6 +65,12 @@ KCMUtils.SimpleKCM {
         return cfg_edgeTtsBinaryPath.length > 0 ? cfg_edgeTtsBinaryPath : "edge-tts"
     }
 
+    function _fetchVoiceList() {
+        page._fetchingVoices = true
+        var helperPath = decodeURIComponent(Qt.resolvedUrl("../scripts/edge_tts_fallback.py").toString().replace(/^file:\/\//, ""))
+        _procHelper.runCommand("python3", [helperPath, "--edge-tts-binary", page._getEdgeTtsBin(), "--"].concat(page._edgeTtsArgs(["--list-voices"])))
+    }
+
     // Keep voice-list requests consistent with synthesis requests.
     function _edgeTtsArgs(args) {
         var result = []
@@ -464,10 +470,10 @@ KCMUtils.SimpleKCM {
 
                 Component.onCompleted: {
                     _procHelper.commandFinished.connect(page._parseVoiceList)
+                    _procHelper.commandError.connect(function() { page._fetchingVoices = false })
                 }
                 onClicked: {
-                    page._fetchingVoices = true
-                    _procHelper.runCommand(page._getEdgeTtsBin(), page._edgeTtsArgs(["--list-voices"]))
+                    page._fetchVoiceList()
                 }
             }
         }
@@ -490,8 +496,7 @@ KCMUtils.SimpleKCM {
         if (!page._restoreVoiceLists()) {
             // No cached data — trigger fetch
             Qt.callLater(function() {
-                page._fetchingVoices = true
-                _procHelper.runCommand(page._getEdgeTtsBin(), page._edgeTtsArgs(["--list-voices"]))
+                page._fetchVoiceList()
             })
         }
     }
